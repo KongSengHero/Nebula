@@ -1,0 +1,384 @@
+@import "tailwindcss";
+
+/* ── Google Font loaded in index.html ── */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  background: #0c0020;
+  color: #e0d4ff;
+  font-family: "Press Start 2P", monospace;
+  font-size: 11px;
+  line-height: 1.8;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0018;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a1a4a;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00f5ff55;
+}
+
+/* ── CRT scanline ── */
+.crt::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent, transparent 2px,
+      rgba(0, 0, 0, 0.07) 2px, rgba(0, 0, 0, 0.07) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── Star field ── */
+.star-bg {
+  background-image:
+    radial-gradient(1px 1px at 8% 12%, #fff3 0%, transparent 100%),
+    radial-gradient(1px 1px at 25% 65%, #fff2 0%, transparent 100%),
+    radial-gradient(1px 1px at 52% 18%, #fff3 0%, transparent 100%),
+    radial-gradient(1px 1px at 73% 82%, #fff2 0%, transparent 100%),
+    radial-gradient(1px 1px at 88% 38%, #fff3 0%, transparent 100%),
+    radial-gradient(2px 2px at 18% 88%, #00f5ff0d 0%, transparent 100%),
+    radial-gradient(2px 2px at 66% 8%, #9b30ff0d 0%, transparent 100%),
+    radial-gradient(600px 600px at 20% 30%, #9b30ff05 0%, transparent 60%),
+    radial-gradient(600px 600px at 80% 70%, #00f5ff04 0%, transparent 60%);
+  background-color: #0c0020;
+}
+
+/* ── Panels ── */
+.panel {
+  background: #170033;
+  border: 1px solid #2a1a4a;
+  position: relative;
+}
+
+.panel-glow {
+  background: #170033;
+  border: 1px solid #00f5ff33;
+  box-shadow: 0 0 0 1px #00f5ff0a, inset 0 0 40px #00f5ff04;
+  position: relative;
+}
+
+.panel-gnosia {
+  background: #17002f;
+  border: 1px solid #9b30ff44;
+  box-shadow: 0 0 0 1px #9b30ff0a, inset 0 0 40px #9b30ff06;
+}
+
+.panel-danger {
+  background: #1a0008;
+  border: 1px solid #ff2a2a44;
+}
+
+/* ── Buttons ── */
+.btn {
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
+  padding: 12px 24px;
+  border: 2px solid #00f5ff;
+  background: transparent;
+  color: #00f5ff;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.1s, box-shadow 0.1s, transform 0.05s;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.btn:hover:not(:disabled) {
+  background: #00f5ff;
+  color: #07000f;
+  box-shadow: 0 0 24px #00f5ffaa, 0 0 48px #00f5ff44;
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(1px, 1px);
+}
+
+.btn:disabled {
+  border-color: #2a1a4a;
+  color: #2a1a4a;
+  cursor: not-allowed;
+}
+
+.btn-lg {
+  font-size: 11px;
+  padding: 16px 32px;
+}
+
+.btn-sm {
+  font-size: 9px;
+  padding: 8px 16px;
+}
+
+.btn-danger {
+  border-color: #ff2a2a;
+  color: #ff2a2a;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #ff2a2a;
+  color: #07000f;
+  box-shadow: 0 0 24px #ff2a2aaa;
+}
+
+.btn-gnosia {
+  border-color: #9b30ff;
+  color: #9b30ff;
+}
+
+.btn-gnosia:hover:not(:disabled) {
+  background: #9b30ff;
+  color: #07000f;
+  box-shadow: 0 0 24px #9b30ffaa;
+}
+
+.btn-gold {
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+.btn-gold:hover:not(:disabled) {
+  background: #ffd700;
+  color: #07000f;
+  box-shadow: 0 0 24px #ffd700aa;
+}
+
+/* ── Inputs ── */
+.input {
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
+  padding: 12px 16px;
+  background: #0a0016;
+  border: 1px solid #2a1a4a;
+  color: #e0d4ff;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  line-height: 1.6;
+}
+
+.input:focus {
+  border-color: #00f5ff;
+  box-shadow: 0 0 12px #00f5ff22;
+}
+
+.input::placeholder {
+  color: #5a4a72;
+}
+
+.input-sm {
+  font-size: 9px;
+  padding: 9px 12px;
+}
+
+/* ── Toggle ── */
+.toggle {
+  appearance: none;
+  width: 44px;
+  height: 22px;
+  background: #0d0020;
+  border: 1px solid #2a1a4a;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  background: #2a1a4a;
+  transition: all 0.2s;
+}
+
+.toggle:checked {
+  background: #00f5ff18;
+  border-color: #00f5ff;
+}
+
+.toggle:checked::after {
+  left: 25px;
+  background: #00f5ff;
+  box-shadow: 0 0 8px #00f5ff;
+}
+
+/* ── Glows ── */
+.glow-cyan {
+  color: #00f5ff;
+  text-shadow: 0 0 12px #00f5ffaa, 0 0 24px #00f5ff44;
+}
+
+.glow-purple {
+  color: #9b30ff;
+  text-shadow: 0 0 12px #9b30ffaa, 0 0 24px #9b30ff44;
+}
+
+.glow-danger {
+  color: #ff2a2a;
+  text-shadow: 0 0 12px #ff2a2aaa, 0 0 24px #ff2a2a44;
+}
+
+.glow-gold {
+  color: #ffd700;
+  text-shadow: 0 0 12px #ffd700aa, 0 0 24px #ffd70044;
+}
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes flicker {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.82;
+  }
+}
+
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 8px #00f5ff33;
+  }
+
+  50% {
+    box-shadow: 0 0 24px #00f5ff88, 0 0 48px #00f5ff33;
+  }
+}
+
+@keyframes scanLine {
+  0% {
+    top: -4px;
+  }
+
+  100% {
+    top: 100%;
+  }
+}
+
+@keyframes urgentPulse {
+
+  0%,
+  100% {
+    color: #ff2a2a;
+    text-shadow: 0 0 8px #ff2a2a88;
+  }
+
+  50% {
+    color: #ff8888;
+    text-shadow: 0 0 20px #ff2a2aff;
+  }
+}
+
+@keyframes voteSlide {
+  0% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  12% {
+    transform: translateX(0%);
+    opacity: 1;
+  }
+  78% {
+    transform: translateX(0%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+}
+
+@keyframes drawerIn {
+  from {
+    transform: translateX(18px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.anim-fadeInUp {
+  animation: fadeInUp 0.35s ease forwards;
+}
+
+.anim-fadeIn {
+  animation: fadeIn 0.25s ease forwards;
+}
+
+.anim-pulseGlow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+.anim-urgent {
+  animation: urgentPulse 0.6s ease-in-out infinite;
+}
+
+/* ── Badge ── */
+.badge {
+  font-size: 8px;
+  padding: 3px 7px;
+  border: 1px solid currentColor;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  border-top: 1px solid #1a0a2a;
+  margin: 0;
+}

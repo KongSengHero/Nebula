@@ -1,0 +1,70 @@
+/**
+ * roles.js — Role assignment with optional host-controlled Gnosia count.
+ */
+
+function assignRoles(gameState) {
+    const { players, settings } = gameState;
+    const total = players.length;
+    if (total < 2) throw new Error("Need at least 2 players.");
+
+    const rolePool = [];
+
+    // Gnosia count: host override OR floor(total/3), min 1, max total-1
+    let gnosiaCount;
+    if (settings.gnosiaCount && settings.gnosiaCount >= 1) {
+        gnosiaCount = Math.min(settings.gnosiaCount, total - 1);
+    } else {
+        gnosiaCount = Math.max(1, Math.floor(total / 3));
+    }
+
+    for (let i = 0; i < gnosiaCount; i++) rolePool.push("gnosia");
+
+    const specials = [];
+    if (settings.hasEngineer) specials.push("engineer");
+    if (settings.hasDoctor) specials.push("doctor");
+    if (settings.hasGuardian) specials.push("guardian");
+
+    const maxSpecials = total - gnosiaCount - 1;
+    rolePool.push(...specials.slice(0, maxSpecials));
+
+    while (rolePool.length < total) rolePool.push("human");
+
+    // Fisher-Yates shuffle
+    for (let i = rolePool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [rolePool[i], rolePool[j]] = [rolePool[j], rolePool[i]];
+    }
+
+    for (let i = 0; i < players.length; i++) {
+        players[i].role = rolePool[i];
+    }
+
+    console.log(`[Roles] ${gameState.roomId}:`, players.map(p => `${p.username}=${p.role}`));
+}
+
+function getGnosiaIds(gameState) {
+    return gameState.players.filter(p => p.role === "gnosia").map(p => p.id);
+}
+
+function buildRolePayload(player, gameState) {
+    const payload = {
+        role: player.role,
+        description: ROLE_DESCRIPTIONS[player.role] || "",
+    };
+    if (player.role === "gnosia") {
+        payload.gnosiaAllies = gameState.players
+            .filter(p => p.role === "gnosia" && p.id !== player.id)
+            .map(p => ({ id: p.id, username: p.username, profileId: p.profileId, profileName: p.profileName || null }));
+    }
+    return payload;
+}
+
+const ROLE_DESCRIPTIONS = {
+    gnosia: "You are Gnosia. Deceive the crew. Each night, coordinate with your allies to eliminate one human. You win when Gnosia outnumber humans.",
+    human: "You are Human. Identify and vote out all Gnosia before they take over the ship.",
+    engineer: "You are the Engineer. Each night, scan one player to learn if they are Gnosia. If they are, they receive a warning — not your identity.",
+    doctor: "You are the Doctor. Each night, inspect one player in Cold Sleep to reveal their true role.",
+    guardian: "You are the Guardian Angel. Each night, protect one other player. If the Gnosia target them, the kill is blocked.",
+};
+
+module.exports = { assignRoles, getGnosiaIds, buildRolePayload, ROLE_DESCRIPTIONS };
