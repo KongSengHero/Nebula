@@ -45,11 +45,10 @@ export default function PlayerCard({
             <div style={{
                 position: "absolute", top: 6, right: 6, display: "flex",
                 flexDirection: "column", gap: 3, alignItems: "flex-end",
-                zIndex: 99,
             }}>
                 {isMe && <span className="badge" style={{ color: "#00f5ff" }}>YOU</span>}
                 {player.isHost && <span className="badge" style={{ color: "#ffd700" }}>HOST</span>}
-                {isAlly && <span className="badge" style={{ color: "#9b30ff" }}>GNOSIA</span>}
+                {isAlly && <span className="badge" style={{ color: "#9b30ff" }}>ALLY</span>}
                 {player.inColdSleep && <span className="badge" style={{ color: "#4a3060" }}>COLD</span>}
             </div>
 
