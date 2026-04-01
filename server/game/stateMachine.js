@@ -133,7 +133,7 @@ function onPhaseExpired(gameState) {
             // Night actions are resolved by nightResolver.js (Part 3).
             // stateMachine only drives the timer here — nightResolver calls
             // advanceToMorning() when all actions are submitted or time expires.
-            advanceToMorning(gameState);
+            require("./nightResolver").resolveNight(gameState);
             break;
 
         case "MORNING":

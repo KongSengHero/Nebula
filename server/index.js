@@ -222,15 +222,8 @@ io.on("connection", (socket) => {
                     io.to(deadId).emit("chat:message", msg);
                 });
             } else {
-                // Alive player message - send to alive AND dead (so dead can spectate)
-                const alivePlayers = gs.players.filter(p => p.alive).map(p => p.id);
-                alivePlayers.forEach(aliveId => {
-                    io.to(aliveId).emit("chat:message", msg);
-                });
-                const deadPlayers = gs.players.filter(p => !p.alive).map(p => p.id);
-                deadPlayers.forEach(deadId => {
-                    io.to(deadId).emit("chat:message", msg);
-                });
+                // Alive player message - send to everyone (alive AND dead can spectate)
+                io.to(roomId).emit("chat:message", msg);
             }
             return cb({ success: true });
         }
@@ -287,6 +280,7 @@ io.on("connection", (socket) => {
         switch (actionType) {
             case "gnosia_vote": {
                 if (actor.role !== "gnosia") return cb({ success: false, error: "Not authorized." });
+                if (nightActions.gnosiaVotes[socket.id]) return cb({ success: false, error: "Action already submitted." });
                 const target = players.find(p => p.id === targetId && p.alive && p.id !== socket.id);
                 if (!target) return cb({ success: false, error: "Invalid target." });
                 nightActions.gnosiaVotes[socket.id] = targetId;
@@ -298,6 +292,7 @@ io.on("connection", (socket) => {
             }
             case "engineer": {
                 if (actor.role !== "engineer") return cb({ success: false, error: "Not authorized." });
+                if (nightActions.engineerTarget) return cb({ success: false, error: "Action already submitted." });
                 const target = players.find(p => p.id === targetId && p.alive && p.id !== socket.id);
                 if (!target) return cb({ success: false, error: "Invalid target." });
                 nightActions.engineerTarget = targetId;
@@ -321,6 +316,7 @@ io.on("connection", (socket) => {
             }
             case "doctor": {
                 if (actor.role !== "doctor") return cb({ success: false, error: "Not authorized." });
+                if (nightActions.doctorTarget) return cb({ success: false, error: "Action already submitted." });
                 const target = players.find(p => p.id === targetId && p.inColdSleep);
                 if (!target) return cb({ success: false, error: "Target not in Cold Sleep." });
                 nightActions.doctorTarget = targetId;
@@ -337,6 +333,7 @@ io.on("connection", (socket) => {
             }
             case "guardian": {
                 if (actor.role !== "guardian") return cb({ success: false, error: "Not authorized." });
+                if (nightActions.guardianTarget) return cb({ success: false, error: "Action already submitted." });
                 if (targetId === socket.id) return cb({ success: false, error: "Cannot self-protect." });
                 const target = players.find(p => p.id === targetId && p.alive);
                 if (!target) return cb({ success: false, error: "Invalid target." });

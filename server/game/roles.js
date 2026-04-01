@@ -24,7 +24,7 @@ function assignRoles(gameState) {
     if (settings.hasDoctor) specials.push("doctor");
     if (settings.hasGuardian) specials.push("guardian");
 
-    const maxSpecials = total - gnosiaCount - 1;
+    const maxSpecials = Math.max(0, total - gnosiaCount - 1);
     rolePool.push(...specials.slice(0, maxSpecials));
 
     while (rolePool.length < total) rolePool.push("human");

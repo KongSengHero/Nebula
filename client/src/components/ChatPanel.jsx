@@ -31,11 +31,13 @@ const GNOSIA_OPEN_PHASES = ["DAY_DISCUSSION", "NIGHT"];
 function MsgBubble({ msg, isMe }) {
     if (msg.type === "system") {
         return (
-            <div style={{ display: "flex", justifyContent: "center", margin: "6px 0" }}>
+            <div style={{ display: "flex", justifyContent: "center", margin: "14px 0" }}>
                 <div style={{
-                    fontSize: 8, color: "#4a3060",
-                    border: "1px solid #2a1a4a", padding: "5px 12px",
+                    fontSize: 8, color: "#8a7aa0",
+                    borderTop: "1px dashed #2a1a4a", borderBottom: "1px dashed #2a1a4a",
+                    padding: "6px 16px",
                     background: "#07000f",
+                    letterSpacing: "0.1em"
                 }}>
                     {msg.text}
                 </div>
