@@ -463,6 +463,7 @@ function buildPhasePayload(gameState) {
         timers: gameState.timers,
         gnosiaCount,
         skipVotes: skipVoters,
+        morningReport: gameState.morningReport || null,
         players: gameState.players.map((p) => ({
             id: p.id,
             username: p.username,

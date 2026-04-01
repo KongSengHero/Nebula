@@ -14,14 +14,17 @@ const META = {
 export default function PhaseOverlay({ phase, morningReport, round, onDismiss }) {
     const [visible, setVisible] = useState(true);
     const meta = META[phase];
-    if (!meta) return null;
 
+    // ⚠ ALL hooks must be called unconditionally — no early returns before this.
     useEffect(() => {
+        if (!meta) return; // guard inside, not before the hook
         setVisible(true);
         const t = setTimeout(() => { setVisible(false); onDismiss?.(); }, meta.delay);
         return () => clearTimeout(t);
-    }, [phase]);
+    }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Early returns AFTER all hooks
+    if (!meta) return null;
     if (!visible) return null;
 
     return (
@@ -99,14 +102,11 @@ export default function PhaseOverlay({ phase, morningReport, round, onDismiss })
                                     {morningReport.killedUsername || "Unknown"}
                                 </div>
                             </div>
-                        ) : morningReport.savedBy === "guardian" ? (
-                            <div style={{ textAlign: "center" }}>
-                                <div style={{ fontSize: 8, color: "#4a3060", marginBottom: 8 }}>KILL BLOCKED</div>
-                                <div className="glow-gold" style={{ fontSize: 12 }}>✦ Guardian intervened</div>
-                            </div>
                         ) : (
                             <div style={{ textAlign: "center", fontSize: 10, color: "#4a3060" }}>
-                                No kill this night.
+                                {morningReport.wasSaved 
+                                    ? "Gnosia activity was detected, but no one was killed."
+                                    : "No kill this night."}
                             </div>
                         )}
                         {morningReport.coldSleep && (

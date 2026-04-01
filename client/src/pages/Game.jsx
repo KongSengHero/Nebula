@@ -211,7 +211,7 @@ export default function Game({ session, socket, onLeaveRoom }) {
     }, [phase, round, players.length, hasShownStartReveal]);
 
     // ── Listeners ─────────────────────────────────────────────
-    useSocketEvent("phase:changed", ({ phase: p, round: r, timers: t, players: pl, skipVotes: sv }) => {
+    useSocketEvent("phase:changed", ({ phase: p, round: r, timers: t, players: pl, skipVotes: sv, morningReport: mr }) => {
         setPhase(p); setRound(r); setTimers(t); setPlayers(pl);
         setSelectedTarget(null); setNightSubmitted(false);
         setActionError(""); setActionMsg("");
@@ -219,7 +219,7 @@ export default function Game({ session, socket, onLeaveRoom }) {
         if (p !== "VOTE_REVEAL" && p !== "AFTERNOON") setVoteBreakdown(null);
         // sv is now an array of { id, username, profileId } objects from the server
         setSkipVotes(Array.isArray(sv) ? sv : []);
-        if (p !== "MORNING") setMorningReport(null);
+        setMorningReport(mr || null);
         if (p === "DAY_DISCUSSION" && r === 1 && !hasShownStartReveal) {
             setShowStartReveal(true);
             setHasShownStartReveal(true);
@@ -817,7 +817,7 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                     padding: "14px 16px", background: "#07000f",
                                     display: "flex", flexDirection: "column", gap: 10,
                                 }}>
-                                    {actionError && <div style={{ fontSize: 8, color: "#ff2a2a" }}>âš  {actionError}</div>}
+                                    {actionError && <div style={{ fontSize: 8, color: "#ff2a2a" }}>⚠ {actionError}</div>}
                                     {actionMsg && <div style={{ fontSize: 8, color: "#00f5ff" }}>{actionMsg}</div>}
                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 12, flexWrap: "wrap" }}>
                                         {/* iVoted: check by ID in the rich voter array */}

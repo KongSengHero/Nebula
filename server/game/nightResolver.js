@@ -105,11 +105,17 @@ function resolveNight(gameState) {
     // ── Step 4: Doctor Inspection ────────────────────────────────────
     const doctorResult = resolveDoctorInspect(gameState);
 
-    // ── Build morning report ──────────────────────────────────────────
+    // ── Build morning report with usernames so MORNING overlay can display them ──
+    const killedPlayer    = killResult.killed ? players.find(p => p.id === killResult.killed) : null;
+    const coldSleepPlayer = gameState.morningReport.coldSleep
+        ? players.find(p => p.id === gameState.morningReport.coldSleep) : null;
+
     gameState.morningReport = {
-        killed: killResult.killed,
-        savedBy: killResult.savedBy,
-        coldSleep: gameState.morningReport.coldSleep, // set by vote resolver, preserve it
+        killed:            killResult.killed  || null,
+        killedUsername:    killedPlayer?.username  || null,
+        wasSaved:          !!killResult.savedBy, // Boolean only, hides 'guardian' role
+        coldSleep:         gameState.morningReport.coldSleep || null,
+        coldSleepUsername: coldSleepPlayer?.username || null,
     };
 
     // ── Deliver private results to role holders ───────────────────────
@@ -117,8 +123,7 @@ function resolveNight(gameState) {
 
     console.log(`[Night] Resolution complete. Kill: ${killResult.killed}, Saved: ${killResult.savedBy}`);
 
-    // ── Advance FSM to MORNING ────────────────────────────────────────
-    // Important: show role result UI first, then advance.
+    // ── Advance FSM to MORNING after brief reveal window ─────────────
     const handle = setTimeout(() => {
         pendingMorningAdvances.delete(gameState.roomId);
         if (gameState.phase !== "NIGHT") return;
