@@ -800,19 +800,30 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                     padding: "14px 16px", background: "#07000f",
                                     display: "flex", flexDirection: "column", gap: 10,
                                 }}>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 12, flexWrap: "wrap" }}>
                                         <button className="btn btn-secondary" style={{ fontSize: 9, flexShrink: 0 }}
-                                            onClick={() => socket.emit("phase:skip", { roomId })} disabled={skipVotes.includes(myId)}>
+                                            onClick={() => {
+                                                if (!skipVotes.includes(myId)) {
+                                                    setSkipVotes(prev => [...prev, myId]);
+                                                    socket.emit("phase:skip", { roomId });
+                                                }
+                                            }} disabled={skipVotes.includes(myId)}>
                                             {skipVotes.includes(myId) ? "✓ SKIP REQUESTED" : "⏭ SKIP PHASE"}
                                         </button>
-                                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                                            {skipVotes.map(voterId => {
+                                        <div style={{ display: "flex", gap: -8, flexWrap: "wrap", alignItems: "center" }}>
+                                            {skipVotes.map((voterId, i) => {
                                                 const p = players.find(x => x.id === voterId);
                                                 if (!p) return null;
                                                 return (
                                                     <img key={voterId} src={`${SERVER}/profiles/${p.profileId}.jpg`} alt={p.username}
                                                         title={`${p.username} wants to skip`}
-                                                        style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #00f5ff55", objectFit: "cover" }}
+                                                        style={{ 
+                                                            width: 28, height: 28, borderRadius: "50%", 
+                                                            border: "2px solid #07000f", objectFit: "cover",
+                                                            boxShadow: "0 0 8px #00f5ff44",
+                                                            marginLeft: i > 0 ? -10 : 0, zIndex: skipVotes.length - i,
+                                                            animation: "fadeInUp 0.3s ease forwards"
+                                                        }}
                                                         onError={(e) => { e.target.style.display="none"; }}
                                                     />
                                                 );

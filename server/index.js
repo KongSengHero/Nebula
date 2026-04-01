@@ -257,6 +257,9 @@ io.on("connection", (socket) => {
             return cb({ success: false, error: "Cannot skip right now." });
         }
 
+        // Prevent repeat skips from duplicate clicks
+        if (gs.skipVotes[socket.id]) return cb({ success: true });
+
         gs.skipVotes[socket.id] = true;
         const skipCount = Object.keys(gs.skipVotes).length;
         const aliveCount = gs.players.filter(p => p.alive).length;
@@ -265,6 +268,7 @@ io.on("connection", (socket) => {
 
         // If everyone skips, force phase advance
         if (skipCount >= aliveCount) {
+            gs.skipVotes = {}; // Clear votes to prevent duplicate advance calls
             stateMachine.forceAdvance(gs, null); 
         }
         cb({ success: true });

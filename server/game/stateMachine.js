@@ -76,6 +76,7 @@ function transitionTo(gameState, nextPhase) {
     clearRoomTimer(gameState.roomId);
 
     gameState.phase = nextPhase;
+    gameState.skipVotes = {}; // Clear skip votes for the new phase
 
     const durationMs = getPhaseDuration(nextPhase, gameState.round);
     const endsAt = Date.now() + durationMs;
