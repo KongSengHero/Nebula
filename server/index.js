@@ -21,12 +21,30 @@ const nightResolver = require("./game/nightResolver");
 const app = express();
 const httpServer = http.createServer(app);
 
+// Always-safe origin allowlist: never blocks prod even if env var is missing.
+const ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://nebula-eight-self.vercel.app",   // production — hardcoded safety net
+    process.env.CLIENT_URL,                   // also honour whatever Render has set
+].filter(Boolean);
+
 const io = new Server(httpServer, {
     cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        origin: (origin, callback) => {
+            // Allow server-to-server / Postman (no origin header)
+            if (!origin) return callback(null, true);
+            if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+            console.warn(`[CORS] Blocked origin: ${origin}`);
+            callback(new Error(`Origin ${origin} not allowed by CORS`));
+        },
         methods: ["GET", "POST"],
         credentials: true,
     },
+    // Force websocket-first — avoids the polling CORS issue entirely on Render
+    transports: ["websocket", "polling"],
+    pingTimeout: 20000,
+    pingInterval: 25000,
 });
 
 stateMachine.init(io);
@@ -257,19 +275,25 @@ io.on("connection", (socket) => {
             return cb({ success: false, error: "Cannot skip right now." });
         }
 
-        // Prevent repeat skips from duplicate clicks
+        // Dedup: ignore if this player already voted to skip
         if (gs.skipVotes[socket.id]) return cb({ success: true });
 
         gs.skipVotes[socket.id] = true;
         const skipCount = Object.keys(gs.skipVotes).length;
         const aliveCount = gs.players.filter(p => p.alive).length;
-        
-        io.to(roomId).emit("phase:skip:updated", Object.keys(gs.skipVotes));
 
-        // If everyone skips, force phase advance
+        // Broadcast rich voter objects so every client can render avatars
+        // without needing a players-array lookup that can fail on reconnect.
+        const voterPayload = Object.keys(gs.skipVotes).map(id => {
+            const p = gs.players.find(x => x.id === id);
+            return p ? { id: p.id, username: p.username, profileId: p.profileId } : null;
+        }).filter(Boolean);
+        io.to(roomId).emit("phase:skip:updated", voterPayload);
+
+        // All alive players have voted to skip — advance phase exactly once.
         if (skipCount >= aliveCount) {
-            gs.skipVotes = {}; // Clear votes to prevent duplicate advance calls
-            stateMachine.forceAdvance(gs, null); 
+            gs.skipVotes = {};  // clear before advance so re-entrant calls are no-ops
+            stateMachine.forceAdvance(gs, null);
         }
         cb({ success: true });
     });

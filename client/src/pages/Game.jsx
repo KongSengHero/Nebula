@@ -187,6 +187,7 @@ export default function Game({ session, socket, onLeaveRoom }) {
     const [hasShownStartReveal, setHasShownStartReveal] = useState(false);
     const [voteReveal, setVoteReveal] = useState(null); // { eliminatedUsername, eliminatedId, reason }
     const [voteBreakdown, setVoteBreakdown] = useState(null); // { voterId -> targetId }
+    // skipVotes is an array of { id, username, profileId } — rich objects, never bare socket IDs
     const [skipVotes, setSkipVotes] = useState(session.lastPhasePayload?.skipVotes || []);
     const [lostConnectionNotice, setLostConnectionNotice] = useState("");
 
@@ -215,7 +216,8 @@ export default function Game({ session, socket, onLeaveRoom }) {
         setActionError(""); setActionMsg("");
         setShowOverlay(true); setScanResult(null); setInspectResult(null); setGuardianResult(null);
         if (p !== "VOTE_REVEAL" && p !== "AFTERNOON") setVoteBreakdown(null);
-        setSkipVotes(sv || []);
+        // sv is now an array of { id, username, profileId } objects from the server
+        setSkipVotes(Array.isArray(sv) ? sv : []);
         if (p !== "MORNING") setMorningReport(null);
         if (p === "DAY_DISCUSSION" && r === 1 && !hasShownStartReveal) {
             setShowStartReveal(true);
@@ -223,7 +225,8 @@ export default function Game({ session, socket, onLeaveRoom }) {
             setShowOverlay(false); // don't cover Mission Start
         }
     });
-    useSocketEvent("phase:skip:updated", voters => setSkipVotes(voters));
+    // voters is an array of { id, username, profileId } — set directly, no lookup needed
+    useSocketEvent("phase:skip:updated", (voters) => setSkipVotes(Array.isArray(voters) ? voters : []));
     useSocketEvent("vote:progress", ({ votesCast, totalAlive }) => setVoteProgress({ votesCast, totalAlive }));
     useSocketEvent("vote:result", result => {
         // Play reveal animation first; apply state after animation completes.
@@ -801,33 +804,39 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                     display: "flex", flexDirection: "column", gap: 10,
                                 }}>
                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 12, flexWrap: "wrap" }}>
-                                        <button className="btn btn-secondary" style={{ fontSize: 9, flexShrink: 0 }}
-                                            onClick={() => {
-                                                if (!skipVotes.includes(myId)) {
-                                                    setSkipVotes(prev => [...prev, myId]);
-                                                    socket.emit("phase:skip", { roomId });
-                                                }
-                                            }} disabled={skipVotes.includes(myId)}>
-                                            {skipVotes.includes(myId) ? "✓ SKIP REQUESTED" : "⏭ SKIP PHASE"}
-                                        </button>
-                                        <div style={{ display: "flex", gap: -8, flexWrap: "wrap", alignItems: "center" }}>
-                                            {skipVotes.map((voterId, i) => {
-                                                const p = players.find(x => x.id === voterId);
-                                                if (!p) return null;
-                                                return (
-                                                    <img key={voterId} src={`${SERVER}/profiles/${p.profileId}.jpg`} alt={p.username}
-                                                        title={`${p.username} wants to skip`}
-                                                        style={{ 
-                                                            width: 28, height: 28, borderRadius: "50%", 
-                                                            border: "2px solid #07000f", objectFit: "cover",
-                                                            boxShadow: "0 0 8px #00f5ff44",
-                                                            marginLeft: i > 0 ? -10 : 0, zIndex: skipVotes.length - i,
-                                                            animation: "fadeInUp 0.3s ease forwards"
-                                                        }}
-                                                        onError={(e) => { e.target.style.display="none"; }}
-                                                    />
-                                                );
-                                            })}
+                                        {/* iVoted: check by ID in the rich voter array */}
+                                        {(() => {
+                                            const iVoted = skipVotes.some(v => v.id === myId);
+                                            return (
+                                                <button className="btn btn-secondary" style={{ fontSize: 9, flexShrink: 0 }}
+                                                    onClick={() => {
+                                                        if (!iVoted) socket.emit("phase:skip", { roomId });
+                                                    }}
+                                                    disabled={iVoted}>
+                                                    {iVoted ? "✓ SKIP REQUESTED" : "⏭ SKIP PHASE"}
+                                                </button>
+                                            );
+                                        })()}
+                                        {/* Voter avatars — use profileId directly from server payload, no lookup */}
+                                        <div style={{ display: "flex", alignItems: "center" }}>
+                                            {skipVotes.map((voter, i) => (
+                                                <img
+                                                    key={voter.id}
+                                                    src={`${SERVER}/profiles/${voter.profileId}.jpg`}
+                                                    alt={voter.username}
+                                                    title={`${voter.username} wants to skip`}
+                                                    style={{
+                                                        width: 28, height: 28, borderRadius: "50%",
+                                                        border: "2px solid #07000f", objectFit: "cover",
+                                                        boxShadow: "0 0 8px #00f5ff44",
+                                                        marginLeft: i > 0 ? -10 : 0,
+                                                        zIndex: skipVotes.length - i,
+                                                        animation: "fadeInUp 0.3s ease forwards",
+                                                        position: "relative",
+                                                    }}
+                                                    onError={(e) => { e.target.style.display = "none"; }}
+                                                />
+                                            ))}
                                         </div>
                                     </div>
                                 </div>

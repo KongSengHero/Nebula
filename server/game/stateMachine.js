@@ -378,12 +378,20 @@ function broadcastToRoom(roomId, event, data) {
  */
 function buildPhasePayload(gameState) {
     const gnosiaCount = gameState.players.filter((p) => p.role === "gnosia").length;
+
+    // Emit rich voter objects (same shape as phase:skip:updated) so clients
+    // can render skip avatars directly without a fragile players-array lookup.
+    const skipVoters = Object.keys(gameState.skipVotes || {}).map(id => {
+        const p = gameState.players.find(x => x.id === id);
+        return p ? { id: p.id, username: p.username, profileId: p.profileId } : null;
+    }).filter(Boolean);
+
     return {
         phase: gameState.phase,
         round: gameState.round,
         timers: gameState.timers,
         gnosiaCount,
-        skipVotes: Object.keys(gameState.skipVotes || {}),
+        skipVotes: skipVoters,
         players: gameState.players.map((p) => ({
             id: p.id,
             username: p.username,
