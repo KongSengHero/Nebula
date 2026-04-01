@@ -73,7 +73,7 @@ function PhaseTimer({ endsAt, color }) {
 }
 
 // ── Game Over screen ─────────────────────────────────────────────────
-function GameOverScreen({ result }) {
+function GameOverScreen({ result, onPlayAgain, amHost }) {
     const hw = result.winner === "humans";
     const wc = hw ? "#00f5ff" : "#9b30ff";
     return (
@@ -144,8 +144,8 @@ function GameOverScreen({ result }) {
                     })}
                 </div>
             </div>
-            <button className="btn btn-lg" onClick={() => window.location.reload()}>
-                PLAY AGAIN
+            <button className="btn btn-lg" onClick={onPlayAgain} style={{ opacity: amHost ? 1 : 0.6 }}>
+                {amHost ? "PLAY AGAIN" : "WAITING FOR HOST"}
             </button>
         </div>
     );
@@ -187,6 +187,7 @@ export default function Game({ session, socket, onLeaveRoom }) {
     const [hasShownStartReveal, setHasShownStartReveal] = useState(false);
     const [voteReveal, setVoteReveal] = useState(null); // { eliminatedUsername, eliminatedId, reason }
     const [voteBreakdown, setVoteBreakdown] = useState(null); // { voterId -> targetId }
+    const [skipVotes, setSkipVotes] = useState(session.lastPhasePayload?.skipVotes || []);
     const [lostConnectionNotice, setLostConnectionNotice] = useState("");
 
     const me = players.find(p => p.id === myId);
@@ -208,12 +209,13 @@ export default function Game({ session, socket, onLeaveRoom }) {
     }, [phase, round, players.length, hasShownStartReveal]);
 
     // ── Listeners ─────────────────────────────────────────────
-    useSocketEvent("phase:changed", ({ phase: p, round: r, timers: t, players: pl }) => {
+    useSocketEvent("phase:changed", ({ phase: p, round: r, timers: t, players: pl, skipVotes: sv }) => {
         setPhase(p); setRound(r); setTimers(t); setPlayers(pl);
         setSelectedTarget(null); setNightSubmitted(false);
         setActionError(""); setActionMsg("");
         setShowOverlay(true); setScanResult(null); setInspectResult(null); setGuardianResult(null);
-        setVoteBreakdown(null);
+        if (p !== "VOTE_REVEAL" && p !== "AFTERNOON") setVoteBreakdown(null);
+        setSkipVotes(sv || []);
         if (p !== "MORNING") setMorningReport(null);
         if (p === "DAY_DISCUSSION" && r === 1 && !hasShownStartReveal) {
             setShowStartReveal(true);
@@ -221,6 +223,7 @@ export default function Game({ session, socket, onLeaveRoom }) {
             setShowOverlay(false); // don't cover Mission Start
         }
     });
+    useSocketEvent("phase:skip:updated", voters => setSkipVotes(voters));
     useSocketEvent("vote:progress", ({ votesCast, totalAlive }) => setVoteProgress({ votesCast, totalAlive }));
     useSocketEvent("vote:result", result => {
         // Play reveal animation first; apply state after animation completes.
@@ -366,7 +369,14 @@ export default function Game({ session, socket, onLeaveRoom }) {
         });
     }
 
-    if (gameOver) return <GameOverScreen result={gameOver} />;
+    function playAgain() {
+        if (!me?.isHost) return alert("Waiting for Host to press Play Again...");
+        socket.emit("room:playAgain", { roomId }, res => {
+            if (!res.success) alert(res.error || "Failed to restart.");
+        });
+    }
+
+    if (gameOver) return <GameOverScreen result={gameOver} onPlayAgain={playAgain} amHost={me?.isHost} />;
 
     // Show reconnecting UI
     if (reconnecting) {
@@ -778,6 +788,35 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                             ? `⚖  VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
                                             : "SELECT WHO TO VOTE OUT"}
                                     </button>
+                                </div>
+                            )}
+
+                            {/* Skip action bar */}
+                            {(phase === "DAY_DISCUSSION" || phase === "AFTERNOON") && me?.alive && (
+                                <div style={{
+                                    flexShrink: 0, borderTop: "1px solid #1a0a2a",
+                                    padding: "14px 16px", background: "#07000f",
+                                    display: "flex", flexDirection: "column", gap: 10,
+                                }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                        <button className="btn btn-secondary" style={{ fontSize: 9, flexShrink: 0 }}
+                                            onClick={() => socket.emit("phase:skip", { roomId })} disabled={skipVotes.includes(myId)}>
+                                            {skipVotes.includes(myId) ? "✓ SKIP REQUESTED" : "⏭ SKIP PHASE"}
+                                        </button>
+                                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                                            {skipVotes.map(voterId => {
+                                                const p = players.find(x => x.id === voterId);
+                                                if (!p) return null;
+                                                return (
+                                                    <img key={voterId} src={`http://localhost:3001/profiles/${p.profileId}.jpg`} alt={p.username}
+                                                        title={`${p.username} wants to skip`}
+                                                        style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #00f5ff55", objectFit: "cover" }}
+                                                        onError={(e) => { e.target.style.display="none"; }}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

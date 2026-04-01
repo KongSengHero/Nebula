@@ -51,16 +51,19 @@ export default function PlayerCard({
                 disabled={!canSelect || isDead}
                 style={{
                     display: "flex", flexDirection: "column", alignItems: "center",
-                    gap: 10, padding: 14,
-                    border: `2px solid ${borderColor}`,
-                    background: bgColor,
-                    boxShadow: shadow,
+                    gap: 12, padding: "16px 12px",
+                    border: `1px solid ${borderColor}`,
+                    background: isDead ? "#07000f" : `linear-gradient(135deg, ${bgColor}ee, ${bgColor}aa)`,
+                    backdropFilter: "blur(12px)",
+                    borderRadius: 16,
+                    boxShadow: shadow !== "none" ? shadow : `0 8px 32px 0 rgba(0, 0, 0, 0.4)`,
                     cursor: !canSelect || isDead ? "default" : "pointer",
-                    opacity: isDead ? 0.35 : 1,
-                    transition: "all 0.15s",
+                    opacity: isDead ? 0.4 : 1,
+                    transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
                     position: "relative",
                     fontFamily: "Press Start 2P",
                     width: "100%",
+                    transform: isSelected ? "translateY(-4px)" : "translateY(0)",
                 }}>
 
                 {/* Badges */}
@@ -76,11 +79,14 @@ export default function PlayerCard({
 
                 {/* Avatar */}
                 <div style={{
-                    width: 72, height: 72,
-                    border: `2px solid ${isDead ? "#1a0a2a" : color + "88"}`,
+                    width: 76, height: 76,
+                    border: `2px solid ${isDead ? "#1a0a2a" : color + "bb"}`,
                     background: color + "15",
+                    borderRadius: "50%",
+                    boxShadow: isDead ? "none" : `0 4px 14px ${color}44`,
                     overflow: "hidden", position: "relative",
                     flexShrink: 0,
+                    transition: "all 0.3s",
                 }}>
                     {isDead ? (
                         <div style={{
@@ -111,7 +117,8 @@ export default function PlayerCard({
                         <div style={{
                             position: "absolute", inset: -3,
                             border: "2px solid #00f5ff",
-                            animation: "pulseGlow 1s ease-in-out infinite",
+                            borderRadius: "50%",
+                            animation: "pulseGlow 1.5s ease-in-out infinite",
                             pointerEvents: "none",
                         }} />
                     )}
@@ -134,12 +141,16 @@ export default function PlayerCard({
                 {/* Select CTA */}
                 {canSelect && !isDead && !isMe && (
                     <div style={{
-                        width: "100%", padding: "7px 0", textAlign: "center",
-                        fontSize: 8,
-                        border: `1px solid ${isSelected ? "#00f5ff" : color + "33"}`,
-                        color: isSelected ? "#00f5ff" : color,
-                        background: isSelected ? "#00f5ff11" : "transparent",
-                        marginTop: 2,
+                        width: "100%", padding: "8px 0", textAlign: "center",
+                        fontSize: 8, letterSpacing: "0.1em",
+                        border: `1px solid ${isSelected ? "#00f5ff" : color + "44"}`,
+                        borderRadius: 8,
+                        color: isSelected ? "#07000f" : color,
+                        background: isSelected ? "#00f5ff" : "rgba(0,0,0,0.4)",
+                        marginTop: 4,
+                        transition: "all 0.2s",
+                        fontWeight: isSelected ? "bold" : "normal",
+                        textShadow: isSelected ? "none" : `0 0 10px ${color}88`,
                     }}>
                         {isSelected ? "✓ SELECTED" :
                             phase === "VOTING" ? "VOTE" : "SELECT"}
@@ -157,10 +168,10 @@ export default function PlayerCard({
                         const voterColor = AVATAR_COLORS[voter.profileId] || "#c8b8ff";
                         return (
                             <div key={voter.id} style={{
-                                width: 28, height: 28,
-                                border: `1px solid ${voterColor}66`,
+                                width: 26, height: 26,
+                                border: `1px solid ${voterColor}88`,
                                 background: voterColor + "15",
-                                borderRadius: 2,
+                                borderRadius: "50%",
                                 overflow: "hidden",
                                 position: "relative",
                                 flexShrink: 0,

@@ -21,6 +21,7 @@ const PHASE_DURATIONS = {
     DAY_DISCUSSION_R1: 3 * 60 * 1000,  // Round 1: 3 minutes
     DAY_DISCUSSION: 3 * 60 * 1000,  // Round 2+: 3 minutes
     VOTING: 90 * 1000,       // 90 seconds for nominations + vote
+    VOTE_REVEAL: 5 * 1000,   // 5 seconds overlay showing votes
     AFTERNOON: 60 * 1000,       // 60-second cooldown chat
     NIGHT: 60 * 1000,       // Night actions window
     MORNING: 15 * 1000,       // Results reveal before next day
@@ -122,6 +123,10 @@ function onPhaseExpired(gameState) {
             resolveVote(gameState);
             // Check win before continuing
             if (checkWin(gameState)) return;
+            transitionTo(gameState, "VOTE_REVEAL");
+            break;
+
+        case "VOTE_REVEAL":
             transitionTo(gameState, "AFTERNOON");
             break;
 
@@ -163,7 +168,7 @@ function endVotingEarly(gameState) {
     clearRoomTimer(gameState.roomId);
     resolveVote(gameState);
     if (checkWin(gameState)) return;
-    transitionTo(gameState, "AFTERNOON");
+    transitionTo(gameState, "VOTE_REVEAL");
 }
 
 // ─────────────────────────────────────────────
@@ -313,10 +318,29 @@ function checkWin(gameState) {
  */
 function forceAdvance(gameState, socketId) {
     const host = gameState.players.find((p) => p.id === socketId && p.isHost);
-    if (!host) return { success: false, error: "Only the host can force-advance." };
+    if (socketId && !host) return { success: false, error: "Only the host can force-advance." };
 
     onPhaseExpired(gameState);
     return { success: true };
+}
+
+function resetToLobby(gameState) {
+    clearRoomTimer(gameState.roomId);
+    gameState.phase = "LOBBY";
+    gameState.round = 0;
+    gameState.winner = null;
+    gameState.players.forEach(p => {
+        p.role = null;
+        p.alive = true;
+        p.inColdSleep = false;
+        p.voteTarget = null;
+        p.protected = false;
+        p.scanned = false;
+    });
+    resetNightFlags(gameState);
+    
+    broadcastToRoom(gameState.roomId, "phase:changed", buildPhasePayload(gameState));
+    console.log(`[FSM] Room ${gameState.roomId} reset to LOBBY`);
 }
 
 // ─────────────────────────────────────────────
@@ -358,6 +382,7 @@ function buildPhasePayload(gameState) {
         round: gameState.round,
         timers: gameState.timers,
         gnosiaCount,
+        skipVotes: Object.keys(gameState.skipVotes || {}),
         players: gameState.players.map((p) => ({
             id: p.id,
             username: p.username,
@@ -391,6 +416,7 @@ module.exports = {
     advanceToMorning,
     checkWin,
     forceAdvance,
+    resetToLobby,
     cleanupRoom,
     broadcastToRoom,
     broadcastPhase,

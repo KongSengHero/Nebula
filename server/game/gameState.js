@@ -40,6 +40,7 @@ function createGameState(roomId, settings = {}) {
             guardianTarget: null,
         },
         votes: {},
+        skipVotes: {},
         nominations: {},
         timers: {
             phase: null,
@@ -71,6 +72,7 @@ function resetNightFlags(gameState) {
         guardianTarget: null,
     };
     gameState.votes = {};
+    gameState.skipVotes = {};
     gameState.nominations = {};
     gameState.morningReport = {
         killed: null, savedBy: null, coldSleep: null,

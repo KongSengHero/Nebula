@@ -127,7 +127,7 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
 
     const pubOpen = PUBLIC_OPEN_PHASES.includes(phase);
     const gnOpen = isGnosia && GNOSIA_OPEN_PHASES.includes(phase);
-    const canSend = isAlive && (tab === "public" ? pubOpen : gnOpen);
+    const canSend = tab === "public" ? pubOpen : (isAlive && gnOpen);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -312,11 +312,7 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
                 {error && (
                     <div style={{ fontSize: 8, color: "#ff2a2a", marginBottom: 8 }}>⚠ {error}</div>
                 )}
-                {!isAlive ? (
-                    <div style={{ textAlign: "center", fontSize: 9, color: "#2a1a3a", padding: "8px 0" }}>
-                        SPECTATOR — READ ONLY
-                    </div>
-                ) : !canSend ? (
+                {!canSend ? (
                     <div style={{ textAlign: "center", fontSize: 9, color: "#2a1a3a", padding: "8px 0" }}>
                         {tab === "public" && phase === "NIGHT" ? "SILENCE DURING NIGHT" : "CHANNEL CLOSED"}
                     </div>
@@ -324,7 +320,7 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
                     <div style={{ display: "flex", gap: 10 }}>
                         <input ref={inputRef} className="input"
                             style={{ fontSize: 10, borderColor: tab === "gnosia" ? "#9b30ff44" : undefined }}
-                            placeholder={tab === "gnosia" ? "gnosia only..." : "transmit message..."}
+                            placeholder={tab === "gnosia" ? "gnosia only..." : (!isAlive ? "spectral chat..." : "transmit message...")}
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}

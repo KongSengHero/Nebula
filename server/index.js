@@ -11,7 +11,7 @@ const crypto = require("crypto");
 
 const {
     createRoom, joinRoom, removePlayer, updateSettings, getRoom, sanitizeStateForLobby,
-    markPlayerDisconnected, scheduleDisconnectRemoval, resumeSession,
+    markPlayerDisconnected, scheduleDisconnectRemoval, resumeSession, resetRoom
 } = require("./rooms/roomManager");
 const { getAllProfiles } = require("./data/profiles");
 const { assignRoles, getGnosiaIds, buildRolePayload } = require("./game/roles");
@@ -165,7 +165,13 @@ io.on("connection", (socket) => {
         });
     });
 
-    // ── GAME START ────────────────────────────────────────────────────
+    // ── GAME START & RESTART ──────────────────────────────────────────
+    socket.on("room:playAgain", ({ roomId }, cb) => {
+        const result = resetRoom(socket.id, roomId);
+        if (!result.success) return cb({ success: false, error: result.error });
+        cb({ success: true });
+    });
+
     socket.on("game:start", ({ roomId }, cb) => {
         const gs = getRoom(roomId);
         if (!gs) return cb({ success: false, error: "Room not found." });
@@ -240,7 +246,30 @@ io.on("connection", (socket) => {
         cb({ success: false, error: "Invalid channel." });
     });
 
-    // ── VOTING ────────────────────────────────────────────────────────
+    // ── SKIP & VOTING ─────────────────────────────────────────────────
+    socket.on("phase:skip", ({ roomId }, cb) => {
+        const gs = getRoom(roomId);
+        if (!gs) return cb({ success: false, error: "Room not found." });
+        const player = gs.players.find(p => p.id === socket.id && p.alive);
+        if (!player) return cb({ success: false, error: "Not allowed." });
+
+        if (gs.phase !== "DAY_DISCUSSION" && gs.phase !== "AFTERNOON") {
+            return cb({ success: false, error: "Cannot skip right now." });
+        }
+
+        gs.skipVotes[socket.id] = true;
+        const skipCount = Object.keys(gs.skipVotes).length;
+        const aliveCount = gs.players.filter(p => p.alive).length;
+        
+        io.to(roomId).emit("phase:skip:updated", Object.keys(gs.skipVotes));
+
+        // If everyone skips, force phase advance
+        if (skipCount >= aliveCount) {
+            stateMachine.forceAdvance(gs, null); 
+        }
+        cb({ success: true });
+    });
+
     socket.on("vote:submit", ({ roomId, targetId }, cb) => {
         const gs = getRoom(roomId);
         if (!gs) return cb({ success: false, error: "Room not found." });

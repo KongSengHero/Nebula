@@ -269,9 +269,19 @@ function sanitizeStateForLobby(gs) {
     };
 }
 
+function resetRoom(socketId, roomId) {
+    const gs = rooms.get(roomId);
+    if (!gs) return { success: false, error: "Room not found." };
+    const host = gs.players.find(p => p.id === socketId);
+    if (!host || !host.isHost) return { success: false, error: "Only host can reset game." };
+
+    stateMachine.resetToLobby(gs);
+    return { success: true };
+}
+
 module.exports = {
     createRoom, joinRoom, removePlayer, updateSettings,
-    getRoom, findRoomBySocket, sanitizeStateForLobby,
+    getRoom, findRoomBySocket, sanitizeStateForLobby, resetRoom,
     markPlayerDisconnected, scheduleDisconnectRemoval,
     resumeSession, cancelDisconnectGrace, migrateSocketId,
 };
