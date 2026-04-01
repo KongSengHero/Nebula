@@ -32,7 +32,7 @@ export default function PlayerCard({
     const isDead = !player.alive;
 
     // Get voters for this player
-    const voters = Object.entries(voteBreakdown)
+    const voters = Object.entries(voteBreakdown || {})
         .filter(([_, targetId]) => targetId === player.id)
         .map(([voterId]) => allPlayers.find(p => p.id === voterId))
         .filter(Boolean);
