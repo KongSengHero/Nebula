@@ -227,6 +227,17 @@ function endVotingEarly(gameState) {
     transitionTo(gameState, "VOTE_REVEAL");
 }
 
+/**
+ * Called when the Lawyer dismisses the vote. Skips resolution entirely
+ * and advances directly to AFTERNOON — no elimination occurs.
+ * @param {object} gameState
+ */
+function dismissVoting(gameState) {
+    if (gameState.phase !== "VOTING") return;
+
+    clearRoomTimer(gameState.roomId);
+    transitionTo(gameState, "AFTERNOON");
+}
 // ─────────────────────────────────────────────
 // VOTING RESOLUTION
 // ─────────────────────────────────────────────
@@ -408,6 +419,7 @@ function resetToLobby(gameState) {
         p.voteTarget = null;
         p.protected = false;
         p.scanned = false;
+        p.dismissed = false;
     });
     resetNightFlags(gameState);
     
@@ -497,6 +509,7 @@ module.exports = {
     isGameStartScheduled,
     transitionTo,
     endVotingEarly,
+    dismissVoting,
     advanceToMorning,
     checkWin,
     forceAdvance,

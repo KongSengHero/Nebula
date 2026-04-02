@@ -4,28 +4,7 @@
 import { useState, useEffect } from "react";
 import { useSocket, useSocketEvent } from "../hooks/useSocket";
 import { clearPlaySession, getOrCreateSessionToken, savePlaySession } from "../lib/sessionPersistence.js";
-
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-
-const AVATAR_COLORS = {
-    setsu: "#a8d8ff",
-    sq: "#ff26db",
-    raqio: "#ff9ef5",
-    comet: "#ffe066",
-    stella: "#00f5ff",
-    kornaros: "#ffb347",
-    yuriko: "#ffaec0",
-    jonas: "#c8b8ff",
-    nyx: "#ff6b6b",
-    parallax: "#66e0ff",
-    voss: "#ffd700",
-    echo: "#d0ffe8",
-    chisa: "#ff4d3d",
-    maomao: "#4eff33",
-    phrolova: "#930c00",
-    miyu: "#ff26db",
-    alya: "#ffffff",
-};
+import { PROFILES, AVATAR_COLORS } from "../lib/profiles.js";
 
 function Avatar({ profileId, username, size = 56, color }) {
     const c = color || AVATAR_COLORS[profileId] || "#c8b8ff";
@@ -39,7 +18,7 @@ function Avatar({ profileId, username, size = 56, color }) {
             position: "relative",
         }}>
             <img
-                src={`${SERVER}/profiles/${profileId}.jpg`}
+                src={`/profiles/${profileId}.jpg`}
                 alt={username || profileId}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
@@ -55,7 +34,15 @@ function Avatar({ profileId, username, size = 56, color }) {
     );
 }
 
-function SettingToggle({ label, desc, checked, onChange }) {
+const ROLE_DESCRIPTIONS = {
+    engineer: "Each night, scan one player to learn if they are Gnosia. If they are, they receive a warning — not your identity.",
+    doctor:   "Each night, inspect one player in Cold Sleep to reveal their true role.",
+    guardian: "Each night, protect one other player. If the Gnosia target them, the kill is blocked.",
+    lawyer:   "Once per game, you may dismiss the vote during any voting round — cancelling it entirely so no one is eliminated.",
+    traitor:  "You have no special ability, but you appear human to all scans and inspections. You win with the Gnosia.",
+};
+
+function SettingToggle({ label, desc, checked, onChange, onInfo }) {
     return (
         <label style={{
             display: "flex", alignItems: "center", gap: 16, cursor: "pointer",
@@ -65,6 +52,13 @@ function SettingToggle({ label, desc, checked, onChange }) {
                 <div style={{ fontSize: 10, color: "#e0d4ff", marginBottom: 4 }}>{label}</div>
                 {desc && <div style={{ fontSize: 8, color: "#4a3060" }}>{desc}</div>}
             </div>
+            {onInfo && (
+                <button onClick={e => { e.preventDefault(); onInfo(); }} style={{
+                    fontSize: 8, color: "#4a3060", border: "1px solid #2a1a4a",
+                    background: "transparent", padding: "4px 8px",
+                    cursor: "pointer", fontFamily: "Press Start 2P", flexShrink: 0,
+                }}>?</button>
+            )}
             <input type="checkbox" className="toggle" checked={checked}
                 onChange={e => onChange(e.target.checked)} />
         </label>
@@ -79,23 +73,16 @@ export default function Lobby({ onReady, resumeFrom }) {
     const [profileId, setProfileId] = useState(null);
     const [joinCode, setJoinCode] = useState("");
     const [joinPass, setJoinPass] = useState("");
-    const [profiles, setProfiles] = useState([]);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [roomId, setRoomId] = useState(null);
     const [myId, setMyId] = useState(null);
     const [lobbyState, setLobbyState] = useState(null);
+    const [expandedRole, setExpandedRole] = useState(null);
     const [settings, setSettings] = useState({
         password: "", hasEngineer: false, hasDoctor: false,
-        hasGuardian: false, gnosiaCount: "",
+        hasGuardian: false, hasLawyer: false, hasTraitor: false, gnosiaCount: "",
     });
-
-    useEffect(() => {
-        fetch(`${SERVER}/api/profiles`)
-            .then(r => r.json())
-            .then(({ profiles }) => setProfiles(profiles))
-            .catch(() => setError("Cannot reach server. Is it running?"));
-    }, []);
 
     useSocketEvent("lobby:updated", ({ state }) => setLobbyState(state));
     useSocketEvent("lobby:hostChanged", ({ newHostId }) => {
@@ -131,6 +118,8 @@ export default function Lobby({ onReady, resumeFrom }) {
                 hasEngineer: settings.hasEngineer,
                 hasDoctor: settings.hasDoctor,
                 hasGuardian: settings.hasGuardian,
+                hasLawyer: settings.hasLawyer,
+                hasTraitor: settings.hasTraitor,
                 gnosiaCount: settings.gnosiaCount ? parseInt(settings.gnosiaCount) : null,
             },
         });
@@ -186,6 +175,8 @@ export default function Lobby({ onReady, resumeFrom }) {
                 hasEngineer: next.hasEngineer,
                 hasDoctor: next.hasDoctor,
                 hasGuardian: next.hasGuardian,
+                hasLawyer: next.hasLawyer,
+                hasTraitor: next.hasTraitor,
                 gnosiaCount: next.gnosiaCount ? parseInt(next.gnosiaCount) : null,
             },
         });
@@ -312,15 +303,53 @@ export default function Lobby({ onReady, resumeFrom }) {
                                 <SettingToggle label="ENGINEER ROLE"
                                     desc="Scans players at night for Gnosia"
                                     checked={settings.hasEngineer}
-                                    onChange={v => changeSetting("hasEngineer", v)} />
+                                    onChange={v => changeSetting("hasEngineer", v)}
+                                    onInfo={() => setExpandedRole(r => r === "engineer" ? null : "engineer")} />
+                                {expandedRole === "engineer" && (
+                                    <div style={{ fontSize: 8, color: "#6a5080", lineHeight: 1.8, padding: "8px 0 12px", borderBottom: "1px solid #1a0a2a" }}>
+                                        {ROLE_DESCRIPTIONS.engineer}
+                                    </div>
+                                )}
                                 <SettingToggle label="DOCTOR ROLE"
                                     desc="Inspects Cold Sleep players"
                                     checked={settings.hasDoctor}
-                                    onChange={v => changeSetting("hasDoctor", v)} />
+                                    onChange={v => changeSetting("hasDoctor", v)}
+                                    onInfo={() => setExpandedRole(r => r === "doctor" ? null : "doctor")} />
+                                {expandedRole === "doctor" && (
+                                    <div style={{ fontSize: 8, color: "#6a5080", lineHeight: 1.8, padding: "8px 0 12px", borderBottom: "1px solid #1a0a2a" }}>
+                                        {ROLE_DESCRIPTIONS.doctor}
+                                    </div>
+                                )}
                                 <SettingToggle label="GUARDIAN ANGEL"
                                     desc="Protects one player per night"
                                     checked={settings.hasGuardian}
-                                    onChange={v => changeSetting("hasGuardian", v)} />
+                                    onChange={v => changeSetting("hasGuardian", v)}
+                                    onInfo={() => setExpandedRole(r => r === "guardian" ? null : "guardian")} />
+                                {expandedRole === "guardian" && (
+                                    <div style={{ fontSize: 8, color: "#6a5080", lineHeight: 1.8, padding: "8px 0 12px", borderBottom: "1px solid #1a0a2a" }}>
+                                        {ROLE_DESCRIPTIONS.guardian}
+                                    </div>
+                                )}
+                                <SettingToggle label="LAWYER ROLE"
+                                    desc="Can dismiss one vote per game"
+                                    checked={settings.hasLawyer}
+                                    onChange={v => changeSetting("hasLawyer", v)}
+                                    onInfo={() => setExpandedRole(r => r === "lawyer" ? null : "lawyer")} />
+                                {expandedRole === "lawyer" && (
+                                    <div style={{ fontSize: 8, color: "#6a5080", lineHeight: 1.8, padding: "8px 0 12px", borderBottom: "1px solid #1a0a2a" }}>
+                                        {ROLE_DESCRIPTIONS.lawyer}
+                                    </div>
+                                )}
+                                <SettingToggle label="TRAITOR ROLE"
+                                    desc="Appears human to all checks, wins with Gnosia"
+                                    checked={settings.hasTraitor}
+                                    onChange={v => changeSetting("hasTraitor", v)}
+                                    onInfo={() => setExpandedRole(r => r === "traitor" ? null : "traitor")} />
+                                {expandedRole === "traitor" && (
+                                    <div style={{ fontSize: 8, color: "#6a5080", lineHeight: 1.8, padding: "8px 0 12px", borderBottom: "1px solid #1a0a2a" }}>
+                                        {ROLE_DESCRIPTIONS.traitor}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="panel" style={{ padding: 20 }}>
@@ -328,19 +357,36 @@ export default function Lobby({ onReady, resumeFrom }) {
                                     ACTIVE SETTINGS
                                 </div>
                                 {[
-                                    { key: "hasEngineer", label: "ENGINEER" },
-                                    { key: "hasDoctor", label: "DOCTOR" },
-                                    { key: "hasGuardian", label: "GUARDIAN ANGEL" },
-                                ].map(({ key, label }) => (
-                                    <div key={key} style={{
-                                        display: "flex", justifyContent: "space-between",
-                                        padding: "10px 0", borderBottom: "1px solid #1a0a2a",
-                                        fontSize: 9
-                                    }}>
-                                        <span style={{ color: "#4a3060" }}>{label}</span>
-                                        <span style={{ color: lobbyState?.settings[key] ? "#00f5ff" : "#2a1a3a" }}>
-                                            {lobbyState?.settings[key] ? "ON" : "OFF"}
-                                        </span>
+                                    { key: "hasEngineer", label: "ENGINEER", role: "engineer" },
+                                    { key: "hasDoctor", label: "DOCTOR", role: "doctor" },
+                                    { key: "hasGuardian", label: "GUARDIAN ANGEL", role: "guardian" },
+                                    { key: "hasLawyer", label: "LAWYER", role: "lawyer" },
+                                    { key: "hasTraitor", label: "TRAITOR", role: "traitor" },
+                                ].map(({ key, label, role }) => (
+                                    <div key={key}>
+                                        <div style={{
+                                            display: "flex", justifyContent: "space-between",
+                                            alignItems: "center",
+                                            padding: "10px 0", borderBottom: "1px solid #1a0a2a",
+                                            fontSize: 9
+                                        }}>
+                                            <span style={{ color: "#4a3060" }}>{label}</span>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                <button onClick={() => setExpandedRole(r => r === role ? null : role)} style={{
+                                                    fontSize: 8, color: "#4a3060", border: "1px solid #2a1a4a",
+                                                    background: "transparent", padding: "2px 7px",
+                                                    cursor: "pointer", fontFamily: "Press Start 2P",
+                                                }}>?</button>
+                                                <span style={{ color: lobbyState?.settings[key] ? "#00f5ff" : "#2a1a3a" }}>
+                                                    {lobbyState?.settings[key] ? "ON" : "OFF"}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {expandedRole === role && (
+                                            <div style={{ fontSize: 8, color: "#6a5080", lineHeight: 1.8, padding: "8px 0 12px", borderBottom: "1px solid #1a0a2a" }}>
+                                                {ROLE_DESCRIPTIONS[role]}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -531,20 +577,12 @@ export default function Lobby({ onReady, resumeFrom }) {
                         <div style={{ fontSize: 9, color: "#4a3060", letterSpacing: "0.15em" }}>
                             SELECT PROFILE
                         </div>
-                        {profiles.length === 0 ? (
-                            <div className="panel" style={{
-                                padding: 24, textAlign: "center",
-                                fontSize: 9, color: "#2a1a3a"
-                            }}>
-                                Loading profiles...
-                            </div>
-                        ) : (
-                            <div style={{
+                        <div style={{
                                 display: "grid",
                                 gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
                                 gap: 10, maxHeight: 460, overflowY: "auto", paddingRight: 4,
                             }}>
-                                {profiles.map(p => {
+                                {PROFILES.map(p => {
                                     const color = AVATAR_COLORS[p.id] || "#c8b8ff";
                                     const selected = profileId === p.id;
                                     const taken = takenProfiles.includes(p.id) && !selected;
@@ -577,7 +615,6 @@ export default function Lobby({ onReady, resumeFrom }) {
                                     );
                                 })}
                             </div>
-                        )}
                     </div>
                 </div>
             </div>

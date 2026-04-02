@@ -1,26 +1,7 @@
 /**
  * PlayerCard.jsx — Redesigned with profile images, larger, responsive.
  */
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-const AVATAR_COLORS = {
-    setsu: "#a8d8ff",
-    sq: "#ff26db",
-    raqio: "#ff9ef5",
-    comet: "#ffe066",
-    stella: "#00f5ff",
-    kornaros: "#ffb347",
-    yuriko: "#ffaec0",
-    jonas: "#c8b8ff",
-    nyx: "#ff6b6b",
-    parallax: "#66e0ff",
-    voss: "#ffd700",
-    echo: "#d0ffe8",
-    chisa: "#ff4d3d",
-    maomao: "#4eff33",
-    phrolova: "#930c00",
-    miyu: "#ff26db",
-    alya: "#ffffff",
-};
+import { AVATAR_COLORS } from "../lib/profiles.js";
 
 export default function PlayerCard({
     player, isMe, isSelected, canSelect, onSelect,
@@ -107,7 +88,7 @@ export default function PlayerCard({
                         }}>✕</div>
                     ) : (
                         <>
-                            <img src={`${SERVER}/profiles/${player.profileId}.jpg`}
+                            <img src={`/profiles/${player.profileId}.jpg`}
                                 alt={player.username}
                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 onError={e => {
@@ -189,7 +170,7 @@ export default function PlayerCard({
                                 position: "relative",
                                 flexShrink: 0,
                             }} title={voter.username}>
-                                <img src={`${SERVER}/profiles/${voter.profileId}.jpg`}
+                                <img src={`/profiles/${voter.profileId}.jpg`}
                                     alt={voter.username}
                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                     onError={e => {

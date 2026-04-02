@@ -1,12 +1,7 @@
 /**
  * NightPanel.jsx — Redesigned night action panel with profile images.
  */
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-const AVATAR_COLORS = {
-    setsu: "#a8d8ff", sq: "#00f5ff", raqio: "#ff9ef5", comet: "#ffe066",
-    stella: "#b0ffb8", kornaros: "#ffb347", yuriko: "#ffaec0", jonas: "#c8b8ff",
-    nyx: "#ff6b6b", parallax: "#66e0ff", voss: "#ffd700", echo: "#d0ffe8",
-};
+import { AVATAR_COLORS } from "../lib/profiles.js";
 
 const ROLE_META = {
     gnosia: {
@@ -34,6 +29,11 @@ const ROLE_META = {
         instruction: "You have no night ability. Hope the Gnosia don't choose you.",
         actionLabel: null, filterFn: () => false
     },
+    traitor: {
+        icon: "◈", color: "#ff4040", heading: "WAIT FOR DAWN",
+        instruction: "You have no night ability. You appear human to all checks. Win with the Gnosia.",
+        actionLabel: null, filterFn: () => false
+    },
 };
 
 function TargetRow({ player, isSelected, label, color, onSelect }) {
@@ -52,7 +52,7 @@ function TargetRow({ player, isSelected, label, color, onSelect }) {
                 border: `2px solid ${isSelected ? color : ac + "55"}`,
                 background: ac + "15", overflow: "hidden", position: "relative",
             }}>
-                <img src={`${SERVER}/profiles/${player.profileId}.jpg`} alt={player.username}
+                <img src={`/profiles/${player.profileId}.jpg`} alt={player.username}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
                 <div style={{
@@ -212,7 +212,7 @@ export default function NightPanel({
 
             {/* Target list */}
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px" }}>
-                {myRole === "human" ? (
+                {myRole === "human" || myRole === "traitor" ? (
                     <div style={{
                         height: "100%", display: "flex", alignItems: "center",
                         justifyContent: "center", flexDirection: "column", gap: 16
@@ -253,7 +253,7 @@ export default function NightPanel({
             </div>
 
             {/* Confirm bar */}
-            {myRole !== "human" && !submitted && (
+            {myRole !== "human" && myRole !== "traitor" && !submitted && (
                 <div style={{
                     flexShrink: 0, borderTop: "1px solid #1a0a2a", padding: "14px 16px",
                     background: "#07000f", display: "flex", flexDirection: "column", gap: 10

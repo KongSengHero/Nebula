@@ -10,22 +10,24 @@ import PhaseOverlay from "../components/PhaseOverlay.jsx";
 import NightPanel from "../components/NightPanel.jsx";
 import StartReveal from "../components/StartReveal.jsx";
 import { clearPlaySession } from "../lib/sessionPersistence.js";
+import { AVATAR_COLORS } from "../lib/profiles.js";
 
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-const AVATAR_COLORS = {
-    setsu: "#a8d8ff", sq: "#ff26db", raqio: "#ff9ef5", comet: "#ffe066",
-    stella: "#00f5ff", kornaros: "#ffb347", yuriko: "#ffaec0", jonas: "#c8b8ff",
-    nyx: "#ff6b6b", parallax: "#66e0ff", voss: "#ffd700", echo: "#d0ffe8",
-    chisa: "#ff4d3d", maomao: "#4eff33", phrolova: "#930c00", miyu: "#ff26db",
-    alya: "#ffffff",
-};
 const PHASE_COLORS = {
     DAY_DISCUSSION: "#00f5ff", VOTING: "#ffd700", AFTERNOON: "#ffb347",
     NIGHT: "#9b30ff", MORNING: "#ff9ef5", END: "#ff2a2a",
 };
 const ROLE_COLORS = {
     gnosia: "#9b30ff", engineer: "#00f5ff", doctor: "#b0ffb8",
-    guardian: "#ffd700", human: "#c8b8ff",
+    guardian: "#ffd700", human: "#c8b8ff", lawyer: "#ff8833", traitor: "#ff4040",
+};
+const ROLE_INFO = {
+    gnosia:   { icon: "👁", desc: "Deceive the crew. Each night, coordinate with your allies to eliminate one human. You win when Gnosia outnumber humans." },
+    human:    { icon: "◈", desc: "Identify and vote out all Gnosia before they take over the ship." },
+    engineer: { icon: "⚡", desc: "Each night, scan one player to learn if they are Gnosia. If they are, they receive a warning — not your identity." },
+    doctor:   { icon: "☤", desc: "Each night, inspect one player in Cold Sleep to reveal their true role." },
+    guardian: { icon: "🛡", desc: "Each night, protect one other player. If the Gnosia target them, the kill is blocked." },
+    lawyer:   { icon: "⚖", desc: "Once per game, you may dismiss the vote during any voting round — cancelling it entirely so no one is eliminated." },
+    traitor:  { icon: "◈", desc: "You have no special ability, but you appear human to all scans and inspections. You win with the Gnosia." },
 };
 
 // ── Big phase timer ──────────────────────────────────────────────────
@@ -101,7 +103,7 @@ function GameOverScreen({ result, onPlayAgain, amHost }) {
                                     width: 40, height: 40, flexShrink: 0,
                                     border: `2px solid ${ac}55`, background: ac + "15", overflow: "hidden",
                                 }}>
-                                    <img src={`${SERVER}/profiles/${p.profileId}.jpg`} alt={p.username}
+                                    <img src={`/profiles/${p.profileId}.jpg`} alt={p.username}
                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                         onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
                                     <div style={{
@@ -194,7 +196,7 @@ function SkipBar({ skipVotes, myId, onSkip, actionError, actionMsg }) {
             <div style={{ display: "flex", alignItems: "center" }}>
                 {skipVotes.map((voter, i) => (
                     <img key={voter.id}
-                        src={`${SERVER}/profiles/${voter.profileId}.jpg`}
+                        src={`/profiles/${voter.profileId}.jpg`}
                         alt={voter.username} title={`${voter.username} wants to skip`}
                         style={{
                             width: 26, height: 26, borderRadius: "50%",
@@ -256,9 +258,12 @@ export default function Game({ session, socket, onLeaveRoom }) {
     const [guardianResult,       setGuardianResult]       = useState(null);
     const [scannedAlert,         setScannedAlert]         = useState(false);
     const [hasVoted,             setHasVoted]             = useState(false);
+    const [hasLawyerDismissed,   setHasLawyerDismissed]   = useState(false);
+    const [voteDismissed,        setVoteDismissed]        = useState(null);
     const [resultModal,          setResultModal]          = useState(null);
     const [showStartReveal,      setShowStartReveal]      = useState(false);
     const [hasShownStartReveal,  setHasShownStartReveal]  = useState(false);
+    const [showRoleInfo,         setShowRoleInfo]         = useState(false);
     const [voteReveal,           setVoteReveal]           = useState(null);
     const [voteBreakdown,        setVoteBreakdown]        = useState(null);
     const [skipVotes,            setSkipVotes]            = useState(session.lastPhasePayload?.skipVotes || []);
@@ -336,6 +341,10 @@ export default function Game({ session, socket, onLeaveRoom }) {
 
     useSocketEvent("phase:skip:updated", voters => setSkipVotes(Array.isArray(voters) ? voters : []));
     useSocketEvent("vote:progress",      ({ votesCast, totalAlive }) => setVoteProgress({ votesCast, totalAlive }));
+    useSocketEvent("vote:dismissed",     ({ byUsername, message }) => {
+        setVoteDismissed({ byUsername, message });
+        setTimeout(() => setVoteDismissed(null), 3500);
+    });
 
     useSocketEvent("vote:result", result => {
         setVoteBreakdown(result.votes || {});
@@ -454,6 +463,13 @@ export default function Game({ session, socket, onLeaveRoom }) {
         });
     }
 
+    function dismissVote() {
+        socket.emit("vote:dismiss", { roomId }, res => {
+            if (!res?.success) { setActionError(res?.error || "Failed."); setTimeout(() => setActionError(""), 3000); return; }
+            setHasLawyerDismissed(true);
+        });
+    }
+
     function leaveRoom() {
         if (!window.confirm("Leave the room?")) return;
         socket.emit("room:leave", { roomId }, res => {
@@ -502,6 +518,33 @@ export default function Game({ session, socket, onLeaveRoom }) {
                 </div>
             )}
 
+            {/* Vote Cancelled popup */}
+            {voteDismissed && (
+                <div style={{
+                    position: "fixed", inset: 0, zIndex: 60,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "rgba(0,0,0,0.75)", animation: "fadeIn 0.2s ease",
+                    pointerEvents: "none",
+                }}>
+                    <div style={{
+                        border: "2px solid #ff883366", background: "#0d0020f2",
+                        padding: "28px 36px", textAlign: "center",
+                        boxShadow: "0 0 60px #000",
+                        animation: "fadeInUp 0.2s ease",
+                    }}>
+                        <div style={{ fontSize: 9, color: "#8a7aa0", letterSpacing: "0.15em", marginBottom: 12 }}>
+                            LAWYER
+                        </div>
+                        <div style={{ fontSize: 20, color: "#ff8833", marginBottom: 10 }}>
+                            <span className="text-red-400">Vote Dismissed</span>
+                        </div>
+                        <div style={{ fontSize: 9, color: "#c8b8ff" }}>
+                            Vote has been dismissed.<br />No one is eliminated.
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Crew reveal (round 1 start) */}
             {showStartReveal && players.length > 0 && (
                 <StartReveal
@@ -513,6 +556,8 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                 ? gnosiaCount
                                 : Math.max(1, Math.floor(players.length / 3))
                     }
+                    myId={myId}
+                    myRole={myRole}
                     onDismiss={() => { setShowStartReveal(false); setShowOverlay(true); }}
                 />
             )}
@@ -563,6 +608,48 @@ export default function Game({ session, socket, onLeaveRoom }) {
                 <PhaseOverlay phase={phase} morningReport={morningReport}
                     round={round} onDismiss={() => setShowOverlay(false)} />
             )}
+
+            {/* Role info modal */}
+            {showRoleInfo && myRole && (() => {
+                const info = ROLE_INFO[myRole] || ROLE_INFO.human;
+                const color = roleColor;
+                return (
+                    <div onClick={() => setShowRoleInfo(false)} style={{
+                        position: "fixed", inset: 0, zIndex: 55,
+                        background: "rgba(0,0,0,0.75)", display: "flex",
+                        alignItems: "center", justifyContent: "center", padding: 24,
+                        animation: "fadeIn 0.2s ease",
+                    }}>
+                        <div onClick={e => e.stopPropagation()} style={{
+                            border: `2px solid ${color}66`, padding: 32, maxWidth: 400, width: "100%",
+                            background: "#0d0020ee", boxShadow: `0 0 40px ${color}22`,
+                            display: "flex", flexDirection: "column", alignItems: "center", gap: 18,
+                        }}>
+                            <div style={{
+                                width: 72, height: 72, border: `2px solid ${color}`,
+                                boxShadow: `0 0 20px ${color}66`, background: color + "12",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: 36,
+                            }}>
+                                {info.icon}
+                            </div>
+                            <div style={{ fontSize: 16, color, textShadow: `0 0 12px ${color}aa`, letterSpacing: "0.08em" }}>
+                                {myRole.toUpperCase()}
+                            </div>
+                            <p style={{ fontSize: 9, color: "#8a7aa0", textAlign: "center", lineHeight: 2 }}>
+                                {info.desc}
+                            </p>
+                            <button onClick={() => setShowRoleInfo(false)} style={{
+                                marginTop: 4, fontSize: 8, color: "#4a3060", border: "1px solid #2a1a4a",
+                                background: "transparent", padding: "8px 20px",
+                                cursor: "pointer", fontFamily: "Press Start 2P",
+                            }}>
+                                CLOSE
+                            </button>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Scanned alert banner */}
             {scannedAlert && (
@@ -646,12 +733,23 @@ export default function Game({ session, socket, onLeaveRoom }) {
                 {!isMobile && (
                     <div style={{ fontSize: 9, color: "#2a1a3a" }}>{roomId}</div>
                 )}
-                <div style={{
-                    fontSize: isMobile ? 8 : 9, border: `1px solid ${roleColor}55`,
-                    color: roleColor, padding: isMobile ? "5px 10px" : "6px 14px",
-                    background: roleColor + "0a",
-                }}>
-                    {myRole?.toUpperCase()}
+                {me && !me.alive && (
+                    <div style={{
+                        fontSize: isMobile ? 8 : 9, border: "1px solid #7a000055",
+                        color: "#ffffff", padding: isMobile ? "5px 10px" : "6px 14px",
+                        background: "#5a0000",
+                    }}>
+                        DEAD
+                    </div>
+                )}
+                <div
+                    onClick={() => setShowRoleInfo(true)}
+                    style={{
+                        fontSize: isMobile ? 8 : 9, border: `1px solid ${roleColor}55`,
+                        color: roleColor, padding: isMobile ? "5px 10px" : "6px 14px",
+                        background: roleColor + "0a", cursor: "pointer",
+                    }}>
+                    {myRole?.toUpperCase()} ?
                 </div>
 
                 {/* Desktop: chat toggle */}
@@ -771,6 +869,18 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                         ? `⚖  VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
                                         : "SELECT WHO TO VOTE OUT"}
                             </button>
+                            {myRole === "lawyer" && (
+                                <button style={{
+                                    width: "100%", marginTop: 10, padding: "10px", fontSize: 9,
+                                    background: hasLawyerDismissed ? "#1a0a2a" : "#7a3a00",
+                                    color: hasLawyerDismissed ? "#3a2a4a" : "#ffbb55",
+                                    border: `1px solid ${hasLawyerDismissed ? "#2a1a3a" : "#ff8833"}`,
+                                    cursor: hasLawyerDismissed ? "not-allowed" : "pointer",
+                                    fontFamily: "Press Start 2P",
+                                }} onClick={dismissVote} disabled={hasLawyerDismissed}>
+                                    {hasLawyerDismissed ? "DISMISS USED" : "⚖ DISMISS VOTE (1×)"}
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -861,6 +971,18 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                                 : selectedTarget ? `⚖ VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
                                                 : "SELECT WHO TO VOTE OUT"}
                                         </button>
+                                        {myRole === "lawyer" && (
+                                            <button style={{
+                                                width: "100%", padding: "10px", fontSize: 8,
+                                                background: hasLawyerDismissed ? "#1a0a2a" : "#7a3a00",
+                                                color: hasLawyerDismissed ? "#3a2a4a" : "#ffbb55",
+                                                border: `1px solid ${hasLawyerDismissed ? "#2a1a3a" : "#ff8833"}`,
+                                                cursor: hasLawyerDismissed ? "not-allowed" : "pointer",
+                                                fontFamily: "Press Start 2P",
+                                            }} onClick={dismissVote} disabled={hasLawyerDismissed}>
+                                                {hasLawyerDismissed ? "DISMISS USED" : "⚖ DISMISS VOTE (1×)"}
+                                            </button>
+                                        )}
                                     </>
                                 )}
                                 {showSkipBar && (

@@ -7,12 +7,11 @@ import Lobby from "./pages/Lobby.jsx";
 import Game from "./pages/Game.jsx";
 import { clearPlaySession, loadPlaySession } from "./lib/sessionPersistence.js";
 
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
 const ROLE_COLORS = {
     gnosia: "#9b30ff", engineer: "#00f5ff", doctor: "#b0ffb8",
-    guardian: "#ffd700", human: "#c8b8ff",
+    guardian: "#ffd700", human: "#c8b8ff", lawyer: "#ff8833", traitor: "#ff4040",
 };
-const ROLE_ICONS = { gnosia: "👁", engineer: "⚡", doctor: "☤", guardian: "🛡", human: "◈" };
+const ROLE_ICONS = { gnosia: "👁", engineer: "⚡", doctor: "☤", guardian: "🛡", human: "◈", lawyer: "⚖", traitor: "◈" };
 
 function RoleReveal({ roleData }) {
     const color = ROLE_COLORS[roleData.role] || "#c8b8ff";
@@ -71,7 +70,7 @@ function RoleReveal({ roleData }) {
                                     width: 36, height: 36, flexShrink: 0,
                                     overflow: "hidden", border: "1px solid #9b30ff44",
                                 }}>
-                                    <img src={`${SERVER}/profiles/${a.profileId}.jpg`} alt={a.username}
+                                    <img src={`/profiles/${a.profileId}.jpg`} alt={a.username}
                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                         onError={e => { e.target.style.display = "none"; }} />
                                 </div>
