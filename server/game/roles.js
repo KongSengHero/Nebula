@@ -23,6 +23,7 @@ function assignRoles(gameState) {
     if (settings.hasEngineer) specials.push("engineer");
     if (settings.hasDoctor) specials.push("doctor");
     if (settings.hasGuardian) specials.push("guardian");
+    if (settings.hasLawyer) specials.push("lawyer");
 
     const maxSpecials = Math.max(0, total - gnosiaCount - 1);
     rolePool.push(...specials.slice(0, maxSpecials));
@@ -65,6 +66,7 @@ const ROLE_DESCRIPTIONS = {
     engineer: "You are the Engineer. Each night, scan one player to learn if they are Gnosia. If they are, they receive a warning — not your identity.",
     doctor: "You are the Doctor. Each night, inspect one player in Cold Sleep to reveal their true role.",
     guardian: "You are the Guardian Angel. Each night, protect one other player. If the Gnosia target them, the kill is blocked.",
+    lawyer: "You are the Lawyer. Once per game, you may dismiss the vote during any voting round — cancelling it entirely so no one is eliminated.",
 };
 
 module.exports = { assignRoles, getGnosiaIds, buildRolePayload, ROLE_DESCRIPTIONS };

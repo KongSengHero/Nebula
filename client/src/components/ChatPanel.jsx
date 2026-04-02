@@ -3,27 +3,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { useSocketEvent } from "../hooks/useSocket";
-
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-const AVATAR_COLORS = {
-    setsu: "#a8d8ff",
-    sq: "#ff26db",
-    raqio: "#ff9ef5",
-    comet: "#ffe066",
-    stella: "#00f5ff",
-    kornaros: "#ffb347",
-    yuriko: "#ffaec0",
-    jonas: "#c8b8ff",
-    nyx: "#ff6b6b",
-    parallax: "#66e0ff",
-    voss: "#ffd700",
-    echo: "#d0ffe8",
-    chisa: "#ff4d3d",
-    maomao: "#4eff33",
-    phrolova: "#930c00",
-    miyu: "#ff26db",
-    alya: "#ffffff",
-};
+import { AVATAR_COLORS } from "../lib/profiles.js";
 
 const PUBLIC_OPEN_PHASES = ["LOBBY", "DAY_DISCUSSION", "AFTERNOON", "MORNING"];
 const GNOSIA_OPEN_PHASES = ["DAY_DISCUSSION", "NIGHT"];
@@ -69,7 +49,7 @@ function MsgBubble({ msg, isMe }) {
                     overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
                     position: "relative",
                 }}>
-                    <img src={`${SERVER}/profiles/${msg.profileId}.jpg`}
+                    <img src={`/profiles/${msg.profileId}.jpg`}
                         alt={msg.senderName}
                         style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isDead ? 0.6 : 1 }}
                         onError={e => {

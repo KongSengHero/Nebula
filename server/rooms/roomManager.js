@@ -275,7 +275,7 @@ function updateSettings(socketId, roomId, settings) {
     const host = gs.players.find(p => p.id === socketId);
     if (!host || !host.isHost) return { success: false, error: "Only host can change settings." };
 
-    const allowed = ["password", "hasEngineer", "hasDoctor", "hasGuardian", "gnosiaCount"];
+    const allowed = ["password", "hasEngineer", "hasDoctor", "hasGuardian", "hasLawyer", "gnosiaCount"];
     for (const key of allowed) {
         if (settings[key] !== undefined) gs.settings[key] = settings[key];
     }

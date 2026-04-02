@@ -16,6 +16,7 @@ function createPlayer(socketId, username, profileId, isHost = false, sessionToke
         voteTarget: null,
         protected: false,
         scanned: false,
+        dismissed: false,
     };
 }
 
@@ -34,6 +35,7 @@ function createGameState(roomId, settings = {}) {
             hasEngineer: settings.hasEngineer || false,
             hasDoctor: settings.hasDoctor || false,
             hasGuardian: settings.hasGuardian || false,
+            hasLawyer: settings.hasLawyer || false,
             gnosiaCount: settings.gnosiaCount || null, // null = auto (floor(n/3))
         },
         nightActions: {

@@ -1,12 +1,7 @@
 /**
  * NightPanel.jsx — Redesigned night action panel with profile images.
  */
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-const AVATAR_COLORS = {
-    setsu: "#a8d8ff", sq: "#00f5ff", raqio: "#ff9ef5", comet: "#ffe066",
-    stella: "#b0ffb8", kornaros: "#ffb347", yuriko: "#ffaec0", jonas: "#c8b8ff",
-    nyx: "#ff6b6b", parallax: "#66e0ff", voss: "#ffd700", echo: "#d0ffe8",
-};
+import { AVATAR_COLORS } from "../lib/profiles.js";
 
 const ROLE_META = {
     gnosia: {
@@ -52,7 +47,7 @@ function TargetRow({ player, isSelected, label, color, onSelect }) {
                 border: `2px solid ${isSelected ? color : ac + "55"}`,
                 background: ac + "15", overflow: "hidden", position: "relative",
             }}>
-                <img src={`${SERVER}/profiles/${player.profileId}.jpg`} alt={player.username}
+                <img src={`/profiles/${player.profileId}.jpg`} alt={player.username}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
                 <div style={{

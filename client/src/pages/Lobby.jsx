@@ -4,28 +4,7 @@
 import { useState, useEffect } from "react";
 import { useSocket, useSocketEvent } from "../hooks/useSocket";
 import { clearPlaySession, getOrCreateSessionToken, savePlaySession } from "../lib/sessionPersistence.js";
-
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-
-const AVATAR_COLORS = {
-    setsu: "#a8d8ff",
-    sq: "#ff26db",
-    raqio: "#ff9ef5",
-    comet: "#ffe066",
-    stella: "#00f5ff",
-    kornaros: "#ffb347",
-    yuriko: "#ffaec0",
-    jonas: "#c8b8ff",
-    nyx: "#ff6b6b",
-    parallax: "#66e0ff",
-    voss: "#ffd700",
-    echo: "#d0ffe8",
-    chisa: "#ff4d3d",
-    maomao: "#4eff33",
-    phrolova: "#930c00",
-    miyu: "#ff26db",
-    alya: "#ffffff",
-};
+import { PROFILES, AVATAR_COLORS } from "../lib/profiles.js";
 
 function Avatar({ profileId, username, size = 56, color }) {
     const c = color || AVATAR_COLORS[profileId] || "#c8b8ff";
@@ -39,7 +18,7 @@ function Avatar({ profileId, username, size = 56, color }) {
             position: "relative",
         }}>
             <img
-                src={`${SERVER}/profiles/${profileId}.jpg`}
+                src={`/profiles/${profileId}.jpg`}
                 alt={username || profileId}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
@@ -79,7 +58,6 @@ export default function Lobby({ onReady, resumeFrom }) {
     const [profileId, setProfileId] = useState(null);
     const [joinCode, setJoinCode] = useState("");
     const [joinPass, setJoinPass] = useState("");
-    const [profiles, setProfiles] = useState([]);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [roomId, setRoomId] = useState(null);
@@ -87,15 +65,8 @@ export default function Lobby({ onReady, resumeFrom }) {
     const [lobbyState, setLobbyState] = useState(null);
     const [settings, setSettings] = useState({
         password: "", hasEngineer: false, hasDoctor: false,
-        hasGuardian: false, gnosiaCount: "",
+        hasGuardian: false, hasLawyer: false, gnosiaCount: "",
     });
-
-    useEffect(() => {
-        fetch(`${SERVER}/api/profiles`)
-            .then(r => r.json())
-            .then(({ profiles }) => setProfiles(profiles))
-            .catch(() => setError("Cannot reach server. Is it running?"));
-    }, []);
 
     useSocketEvent("lobby:updated", ({ state }) => setLobbyState(state));
     useSocketEvent("lobby:hostChanged", ({ newHostId }) => {
@@ -131,6 +102,7 @@ export default function Lobby({ onReady, resumeFrom }) {
                 hasEngineer: settings.hasEngineer,
                 hasDoctor: settings.hasDoctor,
                 hasGuardian: settings.hasGuardian,
+                hasLawyer: settings.hasLawyer,
                 gnosiaCount: settings.gnosiaCount ? parseInt(settings.gnosiaCount) : null,
             },
         });
@@ -186,6 +158,7 @@ export default function Lobby({ onReady, resumeFrom }) {
                 hasEngineer: next.hasEngineer,
                 hasDoctor: next.hasDoctor,
                 hasGuardian: next.hasGuardian,
+                hasLawyer: next.hasLawyer,
                 gnosiaCount: next.gnosiaCount ? parseInt(next.gnosiaCount) : null,
             },
         });
@@ -321,6 +294,10 @@ export default function Lobby({ onReady, resumeFrom }) {
                                     desc="Protects one player per night"
                                     checked={settings.hasGuardian}
                                     onChange={v => changeSetting("hasGuardian", v)} />
+                                <SettingToggle label="LAWYER ROLE"
+                                    desc="Can dismiss one vote per game"
+                                    checked={settings.hasLawyer}
+                                    onChange={v => changeSetting("hasLawyer", v)} />
                             </div>
                         ) : (
                             <div className="panel" style={{ padding: 20 }}>
@@ -331,6 +308,7 @@ export default function Lobby({ onReady, resumeFrom }) {
                                     { key: "hasEngineer", label: "ENGINEER" },
                                     { key: "hasDoctor", label: "DOCTOR" },
                                     { key: "hasGuardian", label: "GUARDIAN ANGEL" },
+                                    { key: "hasLawyer", label: "LAWYER" },
                                 ].map(({ key, label }) => (
                                     <div key={key} style={{
                                         display: "flex", justifyContent: "space-between",
@@ -531,20 +509,12 @@ export default function Lobby({ onReady, resumeFrom }) {
                         <div style={{ fontSize: 9, color: "#4a3060", letterSpacing: "0.15em" }}>
                             SELECT PROFILE
                         </div>
-                        {profiles.length === 0 ? (
-                            <div className="panel" style={{
-                                padding: 24, textAlign: "center",
-                                fontSize: 9, color: "#2a1a3a"
-                            }}>
-                                Loading profiles...
-                            </div>
-                        ) : (
-                            <div style={{
+                        <div style={{
                                 display: "grid",
                                 gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
                                 gap: 10, maxHeight: 460, overflowY: "auto", paddingRight: 4,
                             }}>
-                                {profiles.map(p => {
+                                {PROFILES.map(p => {
                                     const color = AVATAR_COLORS[p.id] || "#c8b8ff";
                                     const selected = profileId === p.id;
                                     const taken = takenProfiles.includes(p.id) && !selected;
@@ -577,7 +547,6 @@ export default function Lobby({ onReady, resumeFrom }) {
                                     );
                                 })}
                             </div>
-                        )}
                     </div>
                 </div>
             </div>

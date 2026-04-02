@@ -10,22 +10,15 @@ import PhaseOverlay from "../components/PhaseOverlay.jsx";
 import NightPanel from "../components/NightPanel.jsx";
 import StartReveal from "../components/StartReveal.jsx";
 import { clearPlaySession } from "../lib/sessionPersistence.js";
+import { AVATAR_COLORS } from "../lib/profiles.js";
 
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-const AVATAR_COLORS = {
-    setsu: "#a8d8ff", sq: "#ff26db", raqio: "#ff9ef5", comet: "#ffe066",
-    stella: "#00f5ff", kornaros: "#ffb347", yuriko: "#ffaec0", jonas: "#c8b8ff",
-    nyx: "#ff6b6b", parallax: "#66e0ff", voss: "#ffd700", echo: "#d0ffe8",
-    chisa: "#ff4d3d", maomao: "#4eff33", phrolova: "#930c00", miyu: "#ff26db",
-    alya: "#ffffff",
-};
 const PHASE_COLORS = {
     DAY_DISCUSSION: "#00f5ff", VOTING: "#ffd700", AFTERNOON: "#ffb347",
     NIGHT: "#9b30ff", MORNING: "#ff9ef5", END: "#ff2a2a",
 };
 const ROLE_COLORS = {
     gnosia: "#9b30ff", engineer: "#00f5ff", doctor: "#b0ffb8",
-    guardian: "#ffd700", human: "#c8b8ff",
+    guardian: "#ffd700", human: "#c8b8ff", lawyer: "#ff8833",
 };
 
 // ── Big phase timer ──────────────────────────────────────────────────
@@ -101,7 +94,7 @@ function GameOverScreen({ result, onPlayAgain, amHost }) {
                                     width: 40, height: 40, flexShrink: 0,
                                     border: `2px solid ${ac}55`, background: ac + "15", overflow: "hidden",
                                 }}>
-                                    <img src={`${SERVER}/profiles/${p.profileId}.jpg`} alt={p.username}
+                                    <img src={`/profiles/${p.profileId}.jpg`} alt={p.username}
                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                         onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
                                     <div style={{
@@ -194,7 +187,7 @@ function SkipBar({ skipVotes, myId, onSkip, actionError, actionMsg }) {
             <div style={{ display: "flex", alignItems: "center" }}>
                 {skipVotes.map((voter, i) => (
                     <img key={voter.id}
-                        src={`${SERVER}/profiles/${voter.profileId}.jpg`}
+                        src={`/profiles/${voter.profileId}.jpg`}
                         alt={voter.username} title={`${voter.username} wants to skip`}
                         style={{
                             width: 26, height: 26, borderRadius: "50%",
@@ -256,6 +249,8 @@ export default function Game({ session, socket, onLeaveRoom }) {
     const [guardianResult,       setGuardianResult]       = useState(null);
     const [scannedAlert,         setScannedAlert]         = useState(false);
     const [hasVoted,             setHasVoted]             = useState(false);
+    const [hasLawyerDismissed,   setHasLawyerDismissed]   = useState(false);
+    const [voteDismissed,        setVoteDismissed]        = useState(null);
     const [resultModal,          setResultModal]          = useState(null);
     const [showStartReveal,      setShowStartReveal]      = useState(false);
     const [hasShownStartReveal,  setHasShownStartReveal]  = useState(false);
@@ -336,6 +331,10 @@ export default function Game({ session, socket, onLeaveRoom }) {
 
     useSocketEvent("phase:skip:updated", voters => setSkipVotes(Array.isArray(voters) ? voters : []));
     useSocketEvent("vote:progress",      ({ votesCast, totalAlive }) => setVoteProgress({ votesCast, totalAlive }));
+    useSocketEvent("vote:dismissed",     ({ byUsername, message }) => {
+        setVoteDismissed({ byUsername, message });
+        setTimeout(() => setVoteDismissed(null), 3500);
+    });
 
     useSocketEvent("vote:result", result => {
         setVoteBreakdown(result.votes || {});
@@ -454,6 +453,13 @@ export default function Game({ session, socket, onLeaveRoom }) {
         });
     }
 
+    function dismissVote() {
+        socket.emit("vote:dismiss", { roomId }, res => {
+            if (!res?.success) { setActionError(res?.error || "Failed."); setTimeout(() => setActionError(""), 3000); return; }
+            setHasLawyerDismissed(true);
+        });
+    }
+
     function leaveRoom() {
         if (!window.confirm("Leave the room?")) return;
         socket.emit("room:leave", { roomId }, res => {
@@ -499,6 +505,33 @@ export default function Game({ session, socket, onLeaveRoom }) {
                     pointerEvents: "none", animation: "fadeInUp 0.2s ease",
                 }}>
                     {lostConnectionNotice}
+                </div>
+            )}
+
+            {/* Vote Cancelled popup */}
+            {voteDismissed && (
+                <div style={{
+                    position: "fixed", inset: 0, zIndex: 60,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "rgba(0,0,0,0.75)", animation: "fadeIn 0.2s ease",
+                    pointerEvents: "none",
+                }}>
+                    <div style={{
+                        border: "2px solid #ff883366", background: "#0d0020f2",
+                        padding: "28px 36px", textAlign: "center",
+                        boxShadow: "0 0 60px #000",
+                        animation: "fadeInUp 0.2s ease",
+                    }}>
+                        <div style={{ fontSize: 9, color: "#8a7aa0", letterSpacing: "0.15em", marginBottom: 12 }}>
+                            LAWYER
+                        </div>
+                        <div style={{ fontSize: 20, color: "#ff8833", marginBottom: 10 }}>
+                            <span className="text-red-400">Vote Dismissed</span>
+                        </div>
+                        <div style={{ fontSize: 9, color: "#c8b8ff" }}>
+                            Vote has been dismissed.<br />No one is eliminated.
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -771,6 +804,18 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                         ? `⚖  VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
                                         : "SELECT WHO TO VOTE OUT"}
                             </button>
+                            {myRole === "lawyer" && (
+                                <button style={{
+                                    width: "100%", marginTop: 10, padding: "10px", fontSize: 9,
+                                    background: hasLawyerDismissed ? "#1a0a2a" : "#7a3a00",
+                                    color: hasLawyerDismissed ? "#3a2a4a" : "#ffbb55",
+                                    border: `1px solid ${hasLawyerDismissed ? "#2a1a3a" : "#ff8833"}`,
+                                    cursor: hasLawyerDismissed ? "not-allowed" : "pointer",
+                                    fontFamily: "Press Start 2P",
+                                }} onClick={dismissVote} disabled={hasLawyerDismissed}>
+                                    {hasLawyerDismissed ? "DISMISS USED" : "⚖ DISMISS VOTE (1×)"}
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -861,6 +906,18 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                                 : selectedTarget ? `⚖ VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
                                                 : "SELECT WHO TO VOTE OUT"}
                                         </button>
+                                        {myRole === "lawyer" && (
+                                            <button style={{
+                                                width: "100%", padding: "10px", fontSize: 8,
+                                                background: hasLawyerDismissed ? "#1a0a2a" : "#7a3a00",
+                                                color: hasLawyerDismissed ? "#3a2a4a" : "#ffbb55",
+                                                border: `1px solid ${hasLawyerDismissed ? "#2a1a3a" : "#ff8833"}`,
+                                                cursor: hasLawyerDismissed ? "not-allowed" : "pointer",
+                                                fontFamily: "Press Start 2P",
+                                            }} onClick={dismissVote} disabled={hasLawyerDismissed}>
+                                                {hasLawyerDismissed ? "DISMISS USED" : "⚖ DISMISS VOTE (1×)"}
+                                            </button>
+                                        )}
                                     </>
                                 )}
                                 {showSkipBar && (

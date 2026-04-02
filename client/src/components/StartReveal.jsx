@@ -1,8 +1,6 @@
 // StartReveal.jsx
 import { useEffect } from "react";
 
-const SERVER = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
-
 export default function StartReveal({ players, gnosiaCount, onDismiss }) {
     useEffect(() => {
         const timer = setTimeout(() => onDismiss(), 5000);
@@ -25,7 +23,7 @@ export default function StartReveal({ players, gnosiaCount, onDismiss }) {
                             <div key={p.id} className="flex flex-col items-center w-[110px]">
                                 <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#00f5ff55]">
                                     <img
-                                        src={`${SERVER}/profiles/${p.profileId}.jpg`}
+                                        src={`/profiles/${p.profileId}.jpg`}
                                         alt={p.username}
                                         className="w-full h-full object-cover"
                                         onError={(e) => {

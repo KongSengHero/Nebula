@@ -6,14 +6,12 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
-const path = require("path");
 const crypto = require("crypto");
 
 const {
     createRoom, joinRoom, removePlayer, updateSettings, getRoom, sanitizeStateForLobby,
     markPlayerDisconnected, scheduleDisconnectRemoval, resumeSession, resetRoom
 } = require("./rooms/roomManager");
-const { getAllProfiles } = require("./data/profiles");
 const { assignRoles, getGnosiaIds, buildRolePayload } = require("./game/roles");
 const stateMachine = require("./game/stateMachine");
 const nightResolver = require("./game/nightResolver");
@@ -53,13 +51,7 @@ nightResolver.init(io);
 app.use(cors());
 app.use(express.json());
 
-// ── Serve profile images from /server/data/profiles ──
-const profilesPath = path.join(__dirname, "data", "profiles");
-app.use("/profiles", express.static(profilesPath));
-console.log(`[Static] Serving profile images from: ${profilesPath}`);
-
 // ── REST ──────────────────────────────────────────────────────────────
-app.get("/api/profiles", (_req, res) => res.json({ profiles: getAllProfiles() }));
 app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
 
 // ── Message builder ───────────────────────────────────────────────────
@@ -353,38 +345,26 @@ io.on("connection", (socket) => {
         }
     });
 
-    // ── SKIP & VOTING ─────────────────────────────────────────────────
-    bindAckHandler("phase:skip", ({ roomId }, cb) => {
+    bindAckHandler("vote:dismiss", ({ roomId }, cb) => {
         const gs = getRoom(roomId);
         if (!gs) return reply(cb, { success: false, error: "Room not found." });
-        const player = gs.players.find(p => p.id === socket.id && p.alive);
-        if (!player) return reply(cb, { success: false, error: "Not allowed." });
+        if (gs.phase !== "VOTING") return reply(cb, { success: false, error: "Not voting phase." });
 
-        if (gs.phase !== "DAY_DISCUSSION" && gs.phase !== "AFTERNOON") {
-            return reply(cb, { success: false, error: "Cannot skip right now." });
-        }
+        const lawyer = gs.players.find(p => p.id === socket.id && p.alive);
+        if (!lawyer) return reply(cb, { success: false, error: "Not allowed." });
+        if (lawyer.role !== "lawyer") return reply(cb, { success: false, error: "Not authorized." });
+        if (lawyer.dismissed) return reply(cb, { success: false, error: "Dismiss already used." });
 
-        // Dedup: ignore if this player already voted to skip
-        if (gs.skipVotes[socket.id]) return reply(cb, { success: true });
-
-        gs.skipVotes[socket.id] = true;
-        const skipCount = Object.keys(gs.skipVotes).length;
-        const aliveCount = gs.players.filter(p => p.alive).length;
-
-        // Broadcast rich voter objects so every client can render avatars
-        // without needing a players-array lookup that can fail on reconnect.
-        const voterPayload = Object.keys(gs.skipVotes).map(id => {
-            const p = gs.players.find(x => x.id === id);
-            return p ? { id: p.id, username: p.username, profileId: p.profileId } : null;
-        }).filter(Boolean);
-        io.to(roomId).emit("phase:skip:updated", voterPayload);
-
-        // All alive players have voted to skip — advance phase exactly once.
-        if (skipCount >= aliveCount) {
-            gs.skipVotes = {};  // clear before advance so re-entrant calls are no-ops
-            stateMachine.forceAdvance(gs, null);
-        }
+        lawyer.dismissed = true;
+        gs.votes = {};
+        gs.skipVotes = {};
         reply(cb, { success: true });
+
+        io.to(roomId).emit("vote:dismissed", {
+            byUsername: lawyer.username,
+            message: "Vote Cancelled",
+        });
+        stateMachine.dismissVoting(gs);
     });
 
     // ── NIGHT ACTIONS ─────────────────────────────────────────────────
@@ -508,7 +488,6 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
     console.log(`\n🚀 Project Nebula — http://localhost:${PORT}`);
-    console.log(`   Profile images: http://localhost:${PORT}/profiles/setsu.jpg`);
 });
 
 module.exports = { io };
