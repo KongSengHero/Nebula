@@ -181,6 +181,7 @@ export default function Game({ session, socket, onLeaveRoom }) {
     const [mobileChatOpen, setMobileChatOpen] = useState(false);
     const [unread, setUnread] = useState({ public: 0, gnosia: 0 });
     const [isMobile, setIsMobile] = useState(false);
+    const [hasVoted, setHasVoted] = useState(false);
 
     const [resultModal, setResultModal] = useState(null); // { title, message, variant, durationMs }
 
@@ -215,8 +216,9 @@ export default function Game({ session, socket, onLeaveRoom }) {
         setPhase(p); setRound(r); setTimers(t); setPlayers(pl);
         setSelectedTarget(null); setNightSubmitted(false);
         setActionError(""); setActionMsg("");
+        setHasVoted(false); // Reset vote lock on phase change
         setShowOverlay(true); setScanResult(null); setInspectResult(null); setGuardianResult(null);
-        if (p !== "VOTE_REVEAL" && p !== "AFTERNOON") setVoteBreakdown(null);
+        if (p !== "VOTE_REVEAL" && p !== "AFTERNOON") { setVoteBreakdown(null); }
         // sv is now an array of { id, username, profileId } objects from the server
         setSkipVotes(Array.isArray(sv) ? sv : []);
         setMorningReport(mr || null);
@@ -348,8 +350,15 @@ export default function Game({ session, socket, onLeaveRoom }) {
     function submitVote() {
         if (!selectedTarget) return;
         socket.emit("vote:submit", { roomId, targetId: selectedTarget }, res => {
-            if (!res.success) { setActionError(res.error); setTimeout(() => setActionError(""), 3000); }
-            else { setActionMsg("Vote cast."); setSelectedTarget(null); }
+            if (!res.success) { 
+                setActionError(res.error); 
+                setTimeout(() => setActionError(""), 3000); 
+            } else { 
+                setActionMsg("Vote locked successfully."); 
+                setSelectedTarget(null); 
+                setHasVoted(true); // Lock the voting UI
+                setTimeout(() => setActionMsg(""), 2000);
+            }
         });
     }
     function submitNightAction(skipArg) {
@@ -716,56 +725,26 @@ export default function Game({ session, socket, onLeaveRoom }) {
             </div>
 
             {/* ── BODY ──────────────────────────────────────────── */}
-            <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
 
-                {/* LEFT: player grid or NightPanel */}
-                <div style={{
-                    display: "flex", flexDirection: "column", overflow: "hidden",
-                    borderRight: "1px solid #1a0a2a",
-                    width: chatPanelOpen && !isMobile ? "50%" : "100%",
-                    minWidth: chatPanelOpen && !isMobile ? 280 : undefined,
-                    transition: "width 0.2s",
-                }}>
-                    {isNight ? (
-                        <NightPanel
-                            myRole={myRole} players={players} myId={myId}
-                            gnosiaAllies={allies}
-                            selectedTarget={selectedTarget} onSelect={setSelectedTarget}
-                            submitted={nightSubmitted} actionMsg={actionMsg}
-                            actionError={actionError} onConfirm={submitNightAction}
-                            gnosiaVoteProgress={gnosiaVP}
-                            scanResult={scanResult} inspectResult={inspectResult} guardianResult={guardianResult}
-                        />
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-
-                            {/* Vote progress bar */}
-                            {isVoting && (
+                {/* Mobile Layout */}
+                {isMobile ? (
+                    <>
+                        {/* Fixed Profile Container */}
+                        <div style={{
+                            flexShrink: 0,
+                            height: "200px",
+                            borderBottom: "1px solid #1a0a2a",
+                            background: "#07000f",
+                            overflowY: "auto",
+                            overflowX: "hidden"
+                        }}>
+                            <div style={{ padding: "12px 16px" }}>
                                 <div style={{
-                                    padding: "10px 16px", flexShrink: 0,
-                                    borderBottom: "1px solid #1a0a2a",
-                                    display: "flex", alignItems: "center", gap: 12
-                                }}>
-                                    <span style={{ fontSize: 8, color: "#4a3060", flexShrink: 0 }}>VOTES</span>
-                                    <div style={{ flex: 1, height: 4, background: "#1a0015", borderRadius: 2 }}>
-                                        <div style={{
-                                            height: "100%", background: "#ffd700",
-                                            boxShadow: "0 0 8px #ffd700",
-                                            borderRadius: 2, transition: "width 0.5s",
-                                            width: `${voteProgress.totalAlive > 0 ? (voteProgress.votesCast / voteProgress.totalAlive) * 100 : 0}%`,
-                                        }} />
-                                    </div>
-                                    <span style={{ fontSize: 9, color: "#ffd700", flexShrink: 0 }}>
-                                        {voteProgress.votesCast}/{voteProgress.totalAlive}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Player grid */}
-                            <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-                                <div style={{
-                                    display: "flex", justifyContent: "space-between",
-                                    alignItems: "center", marginBottom: 14,
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    marginBottom: 10,
                                 }}>
                                     <span style={{ fontSize: 9, color: "#4a3060", letterSpacing: "0.1em" }}>
                                         CREW MANIFEST
@@ -775,56 +754,88 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                     </span>
                                 </div>
                                 <div style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "repeat(auto-fill, minmax(140px,1fr))",
-                                    gap: 12,
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: 8,
+                                    justifyContent: "flex-start"
                                 }}>
                                     {players.map(p => (
-                                        <PlayerCard key={p.id} player={p}
-                                            isMe={p.id === myId}
-                                            isSelected={selectedTarget === p.id}
-                                            canSelect={me?.alive && canTarget(p)}
-                                            onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)}
-                                            phase={phase} myRole={myRole}
-                                            gnosiaAllies={allies.map(a => a.id)}
-                                            voteBreakdown={voteBreakdown}
-                                            allPlayers={players} />
+                                        <div key={p.id} style={{
+                                            width: "80px",
+                                            flexShrink: 0
+                                        }}>
+                                            <PlayerCard player={p}
+                                                isMe={p.id === myId}
+                                                isSelected={selectedTarget === p.id}
+                                                canSelect={me?.alive && canTarget(p)}
+                                                onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)}
+                                                phase={phase} myRole={myRole}
+                                                gnosiaAllies={allies.map(a => a.id)}
+                                                voteBreakdown={voteBreakdown}
+                                                allPlayers={players}
+                                                compact={true} />
+                                        </div>
                                     ))}
                                 </div>
                             </div>
+                        </div>
 
+                        {/* Vote progress bar */}
+                        {isVoting && (
+                            <div style={{
+                                padding: "8px 16px", flexShrink: 0,
+                                borderBottom: "1px solid #1a0a2a",
+                                display: "flex", alignItems: "center", gap: 12
+                            }}>
+                                <span style={{ fontSize: 8, color: "#4a3060", flexShrink: 0 }}>VOTES</span>
+                                <div style={{ flex: 1, height: 4, background: "#1a0015", borderRadius: 2 }}>
+                                    <div style={{
+                                        height: "100%", background: "#ffd700",
+                                        boxShadow: "0 0 8px #ffd700",
+                                        borderRadius: 2, transition: "width 0.5s",
+                                        width: `${voteProgress.totalAlive > 0 ? (voteProgress.votesCast / voteProgress.totalAlive) * 100 : 0}%`,
+                                    }} />
+                                </div>
+                                <span style={{ fontSize: 9, color: "#ffd700", flexShrink: 0 }}>
+                                    {voteProgress.votesCast}/{voteProgress.totalAlive}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Middle Action Area */}
+                        <div style={{
+                            flexShrink: 0,
+                            padding: "12px 16px",
+                            background: "#0d0020",
+                            borderTop: "1px solid #1a0a2a",
+                            borderBottom: "1px solid #1a0a2a"
+                        }}>
                             {/* Voting action bar */}
                             {isVoting && me?.alive && (
-                                <div style={{
-                                    flexShrink: 0, borderTop: "1px solid #1a0a2a",
-                                    padding: "14px 16px", background: "#07000f"
-                                }}>
-                                    {actionError && <div style={{ fontSize: 8, color: "#ff2a2a", marginBottom: 8 }}>⚠ {actionError}</div>}
-                                    {actionMsg && <div style={{ fontSize: 8, color: "#00f5ff", marginBottom: 8 }}>{actionMsg}</div>}
-                                    <button className="btn btn-gold" style={{ width: "100%", fontSize: 10 }}
-                                        onClick={submitVote} disabled={!selectedTarget}>
-                                        {selectedTarget
-                                            ? `⚖  VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
-                                            : "SELECT WHO TO VOTE OUT"}
+                                <div style={{ marginBottom: phase === "DAY_DISCUSSION" || phase === "AFTERNOON" ? 8 : 0 }}>
+                                    {actionError && <div style={{ fontSize: 8, color: "#ff2a2a", marginBottom: 6 }}>⚠ {actionError}</div>}
+                                    {actionMsg && <div style={{ fontSize: 8, color: "#00f5ff", marginBottom: 6 }}>{actionMsg}</div>}
+                                    <button className="btn btn-gold" style={{ width: "100%", fontSize: 9, padding: "10px" }}
+                                        onClick={submitVote} disabled={!selectedTarget || hasVoted}>
+                                        {hasVoted 
+                                            ? "✓ VOTE LOCKED"
+                                            : selectedTarget
+                                                ? `⚖ VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
+                                                : "SELECT WHO TO VOTE OUT"}
                                     </button>
                                 </div>
                             )}
 
                             {/* Skip action bar */}
                             {(phase === "DAY_DISCUSSION" || phase === "AFTERNOON") && me?.alive && (
-                                <div style={{
-                                    flexShrink: 0, borderTop: "1px solid #1a0a2a",
-                                    padding: "14px 16px", background: "#07000f",
-                                    display: "flex", flexDirection: "column", gap: 10,
-                                }}>
-                                    {actionError && <div style={{ fontSize: 8, color: "#ff2a2a" }}>⚠ {actionError}</div>}
-                                    {actionMsg && <div style={{ fontSize: 8, color: "#00f5ff" }}>{actionMsg}</div>}
+                                <div>
+                                    {actionError && <div style={{ fontSize: 8, color: "#ff2a2a", marginBottom: 6 }}>⚠ {actionError}</div>}
+                                    {actionMsg && <div style={{ fontSize: 8, color: "#00f5ff", marginBottom: 6 }}>{actionMsg}</div>}
                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 12, flexWrap: "wrap" }}>
-                                        {/* iVoted: check by ID in the rich voter array */}
                                         {(() => {
                                             const iVoted = skipVotes.some(v => v.id === myId);
                                             return (
-                                                <button className="btn btn-secondary" style={{ fontSize: 9, flexShrink: 0 }}
+                                                <button className="btn btn-secondary" style={{ fontSize: 8, flexShrink: 0, padding: "8px 12px" }}
                                                     onClick={() => {
                                                         if (!iVoted) requestSkipPhase();
                                                     }}
@@ -833,7 +844,6 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                                 </button>
                                             );
                                         })()}
-                                        {/* Voter avatars — use profileId directly from server payload, no lookup */}
                                         <div style={{ display: "flex", alignItems: "center" }}>
                                             {skipVotes.map((voter, i) => (
                                                 <img
@@ -842,10 +852,10 @@ export default function Game({ session, socket, onLeaveRoom }) {
                                                     alt={voter.username}
                                                     title={`${voter.username} wants to skip`}
                                                     style={{
-                                                        width: 28, height: 28, borderRadius: "50%",
+                                                        width: 24, height: 24, borderRadius: "50%",
                                                         border: "2px solid #07000f", objectFit: "cover",
                                                         boxShadow: "0 0 8px #00f5ff44",
-                                                        marginLeft: i > 0 ? -10 : 0,
+                                                        marginLeft: i > 0 ? -8 : 0,
                                                         zIndex: skipVotes.length - i,
                                                         animation: "fadeInUp 0.3s ease forwards",
                                                         position: "relative",
@@ -860,150 +870,210 @@ export default function Game({ session, socket, onLeaveRoom }) {
 
                             {/* Spectator bar */}
                             {!me?.alive && (
-                                <div style={{
-                                    flexShrink: 0, borderTop: "1px solid #1a0a2a",
-                                    padding: "12px 16px", textAlign: "center"
-                                }}>
-                                    <span style={{ fontSize: 9, color: "#2a1a3a" }}>
+                                <div style={{ textAlign: "center" }}>
+                                    <span style={{ fontSize: 8, color: "#2a1a3a" }}>
                                         YOU ARE IN COLD SLEEP — SPECTATING
                                     </span>
                                 </div>
                             )}
                         </div>
-                    )}
-                </div>
 
-                {/* RIGHT: Chat (desktop only) */}
-                {!isMobile && chatOpen && (
-                    <div style={{
-                        display: "flex", flexDirection: "column", overflow: "hidden",
-                        flex: 1, minWidth: 0,
-                    }}>
-                        <ChatPanel
-                            roomId={roomId} myRole={myRole}
-                            isAlive={me?.alive ?? true}
-                            phase={phase} socket={socket}
-                            isPanelOpen={true}
-                            onUnreadChange={setUnread}
-                        />
+                        {/* Chat Panel - Always Visible */}
+                        <div style={{
+                            flex: 1,
+                            minHeight: 0,
+                            display: "flex",
+                            flexDirection: "column",
+                            background: "#07000f"
+                        }}>
+                            <ChatPanel
+                                roomId={roomId} myRole={myRole}
+                                isAlive={me?.alive ?? true}
+                                phase={phase} socket={socket}
+                                isPanelOpen={true}
+                                onUnreadChange={setUnread}
+                            />
+                        </div>
+                    </>
+                ) : (
+                    /* Desktop Layout (Original) */
+                    <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
+                        {/* LEFT: player grid or NightPanel */}
+                        <div style={{
+                            display: "flex", flexDirection: "column", overflow: "hidden",
+                            borderRight: "1px solid #1a0a2a",
+                            width: chatPanelOpen && !isMobile ? "50%" : "100%",
+                            minWidth: chatPanelOpen && !isMobile ? 280 : undefined,
+                            transition: "width 0.2s",
+                        }}>
+                            {isNight ? (
+                                <NightPanel
+                                    myRole={myRole} players={players} myId={myId}
+                                    gnosiaAllies={allies}
+                                    selectedTarget={selectedTarget} onSelect={setSelectedTarget}
+                                    submitted={nightSubmitted} actionMsg={actionMsg}
+                                    actionError={actionError} onConfirm={submitNightAction}
+                                    gnosiaVoteProgress={gnosiaVP}
+                                    scanResult={scanResult} inspectResult={inspectResult} guardianResult={guardianResult}
+                                />
+                            ) : (
+                                <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
+
+                                    {/* Vote progress bar */}
+                                    {isVoting && (
+                                        <div style={{
+                                            padding: "10px 16px", flexShrink: 0,
+                                            borderBottom: "1px solid #1a0a2a",
+                                            display: "flex", alignItems: "center", gap: 12
+                                        }}>
+                                            <span style={{ fontSize: 8, color: "#4a3060", flexShrink: 0 }}>VOTES</span>
+                                            <div style={{ flex: 1, height: 4, background: "#1a0015", borderRadius: 2 }}>
+                                                <div style={{
+                                                    height: "100%", background: "#ffd700",
+                                                    boxShadow: "0 0 8px #ffd700",
+                                                    borderRadius: 2, transition: "width 0.5s",
+                                                    width: `${voteProgress.totalAlive > 0 ? (voteProgress.votesCast / voteProgress.totalAlive) * 100 : 0}%`,
+                                                }} />
+                                            </div>
+                                            <span style={{ fontSize: 9, color: "#ffd700", flexShrink: 0 }}>
+                                                {voteProgress.votesCast}/{voteProgress.totalAlive}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Player grid */}
+                                    <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+                                        <div style={{
+                                            display: "flex", justifyContent: "space-between",
+                                            alignItems: "center", marginBottom: 14,
+                                        }}>
+                                            <span style={{ fontSize: 9, color: "#4a3060", letterSpacing: "0.1em" }}>
+                                                CREW MANIFEST
+                                            </span>
+                                            <span style={{ fontSize: 9, color: "#4a3060" }}>
+                                                {aliveCount} alive / {players.length}
+                                            </span>
+                                        </div>
+                                        <div style={{
+                                            display: "grid",
+                                            gridTemplateColumns: "repeat(auto-fill, minmax(140px,1fr))",
+                                            gap: 12,
+                                        }}>
+                                            {players.map(p => (
+                                                <PlayerCard key={p.id} player={p}
+                                                    isMe={p.id === myId}
+                                                    isSelected={selectedTarget === p.id}
+                                                    canSelect={me?.alive && canTarget(p)}
+                                                    onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)}
+                                                    phase={phase} myRole={myRole}
+                                                    gnosiaAllies={allies.map(a => a.id)}
+                                                    voteBreakdown={voteBreakdown}
+                                                    allPlayers={players} />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Voting action bar */}
+                                    {isVoting && me?.alive && (
+                                        <div style={{
+                                            flexShrink: 0, borderTop: "1px solid #1a0a2a",
+                                            padding: "14px 16px", background: "#07000f"
+                                        }}>
+                                            {actionError && <div style={{ fontSize: 8, color: "#ff2a2a", marginBottom: 8 }}>⚠ {actionError}</div>}
+                                            {actionMsg && <div style={{ fontSize: 8, color: "#00f5ff", marginBottom: 8 }}>{actionMsg}</div>}
+                                            <button className="btn btn-gold" style={{ width: "100%", fontSize: 10 }}
+                                                onClick={submitVote} disabled={!selectedTarget || hasVoted}>
+                                                {hasVoted 
+                                                    ? "✓ VOTE LOCKED"
+                                                    : selectedTarget
+                                                        ? `⚖  VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
+                                                        : "SELECT WHO TO VOTE OUT"}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Skip action bar */}
+                                    {(phase === "DAY_DISCUSSION" || phase === "AFTERNOON") && me?.alive && (
+                                        <div style={{
+                                            flexShrink: 0, borderTop: "1px solid #1a0a2a",
+                                            padding: "14px 16px", background: "#07000f",
+                                            display: "flex", flexDirection: "column", gap: 10,
+                                        }}>
+                                            {actionError && <div style={{ fontSize: 8, color: "#ff2a2a" }}>⚠ {actionError}</div>}
+                                            {actionMsg && <div style={{ fontSize: 8, color: "#00f5ff" }}>{actionMsg}</div>}
+                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 12, flexWrap: "wrap" }}>
+                                                {/* iVoted: check by ID in the rich voter array */}
+                                                {(() => {
+                                                    const iVoted = skipVotes.some(v => v.id === myId);
+                                                    return (
+                                                        <button className="btn btn-secondary" style={{ fontSize: 9, flexShrink: 0 }}
+                                                            onClick={() => {
+                                                                if (!iVoted) requestSkipPhase();
+                                                            }}
+                                                            disabled={iVoted}>
+                                                            {iVoted ? "✓ SKIP REQUESTED" : "⏭ SKIP PHASE"}
+                                                        </button>
+                                                    );
+                                                })()}
+                                                {/* Voter avatars — use profileId directly from server payload, no lookup */}
+                                                <div style={{ display: "flex", alignItems: "center" }}>
+                                                    {skipVotes.map((voter, i) => (
+                                                        <img
+                                                            key={voter.id}
+                                                            src={`${SERVER}/profiles/${voter.profileId}.jpg`}
+                                                            alt={voter.username}
+                                                            title={`${voter.username} wants to skip`}
+                                                            style={{
+                                                                width: 28, height: 28, borderRadius: "50%",
+                                                                border: "2px solid #07000f", objectFit: "cover",
+                                                                boxShadow: "0 0 8px #00f5ff44",
+                                                                marginLeft: i > 0 ? -10 : 0,
+                                                                zIndex: skipVotes.length - i,
+                                                                animation: "fadeInUp 0.3s ease forwards",
+                                                                position: "relative",
+                                                            }}
+                                                            onError={(e) => { e.target.style.display = "none"; }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Spectator bar */}
+                                    {!me?.alive && (
+                                        <div style={{
+                                            flexShrink: 0, borderTop: "1px solid #1a0a2a",
+                                            padding: "12px 16px", textAlign: "center"
+                                        }}>
+                                            <span style={{ fontSize: 9, color: "#2a1a3a" }}>
+                                                YOU ARE IN COLD SLEEP — SPECTATING
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* RIGHT: Chat (desktop only) */}
+                        {!isMobile && chatOpen && (
+                            <div style={{
+                                display: "flex", flexDirection: "column", overflow: "hidden",
+                                flex: 1, minWidth: 0,
+                            }}>
+                                <ChatPanel
+                                    roomId={roomId} myRole={myRole}
+                                    isAlive={me?.alive ?? true}
+                                    phase={phase} socket={socket}
+                                    isPanelOpen={true}
+                                    onUnreadChange={setUnread}
+                                />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
 
-            {/* Mobile chat FAB + modal drawer (kept mounted for unread counts) */}
-            {isMobile && (
-                <>
-                    <button
-                        onClick={() => setMobileChatOpen(true)}
-                        aria-label="Open chat"
-                        style={{
-                            position: "fixed",
-                            right: 16,
-                            bottom: 16,
-                            zIndex: 70,
-                            width: 54,
-                            height: 54,
-                            borderRadius: 999,
-                            border: "1px solid #00f5ff55",
-                            background: "#0d0020ee",
-                            color: "#00f5ff",
-                            boxShadow: "0 0 24px #00f5ff22",
-                            fontSize: 16,
-                            cursor: "pointer",
-                        }}
-                    >
-                        💬
-                        {totalUnread > 0 && (
-                            <span style={{
-                                position: "absolute",
-                                top: -6,
-                                right: -6,
-                                minWidth: 20,
-                                height: 20,
-                                padding: "0 6px",
-                                borderRadius: 999,
-                                background: "#ff2a2a",
-                                color: "#07000f",
-                                fontSize: 9,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "1px solid #ff2a2a66",
-                                boxShadow: "0 0 14px #ff2a2a66",
-                            }}>
-                                {Math.min(99, totalUnread)}
-                            </span>
-                        )}
-                    </button>
-
-                    {/* Backdrop */}
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        style={{
-                            position: "fixed",
-                            inset: 0,
-                            zIndex: 80,
-                            background: mobileChatOpen ? "rgba(0,0,0,0.65)" : "rgba(0,0,0,0)",
-                            display: "flex",
-                            justifyContent: "flex-end",
-                            pointerEvents: mobileChatOpen ? "auto" : "none",
-                            transition: "background 0.18s ease",
-                        }}
-                        onClick={() => setMobileChatOpen(false)}
-                    >
-                        <div
-                            style={{
-                                width: "100vw",
-                                height: "100%",
-                                background: "#07000f",
-                                borderLeft: "1px solid #2a1a4a",
-                                boxShadow: "-30px 0 80px #000",
-                                display: "flex",
-                                flexDirection: "column",
-                                transform: mobileChatOpen ? "translateX(0)" : "translateX(110%)",
-                                transition: "transform 0.18s ease",
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div style={{
-                                padding: "12px 14px",
-                                borderBottom: "1px solid #1a0a2a",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                            }}>
-                                <div style={{ fontSize: 9, color: "#8a7aa0" }}>CHAT</div>
-                                <button
-                                    onClick={() => setMobileChatOpen(false)}
-                                    style={{
-                                        fontSize: 10,
-                                        border: "1px solid #2a1a4a",
-                                        background: "transparent",
-                                        color: "#e0d4ff",
-                                        padding: "6px 10px",
-                                        cursor: "pointer",
-                                        fontFamily: "Press Start 2P",
-                                    }}
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                            <div style={{ flex: 1, minHeight: 0 }}>
-                                <ChatPanel
-                                    roomId={roomId}
-                                    myRole={myRole}
-                                    isAlive={me?.alive ?? true}
-                                    phase={phase}
-                                    socket={socket}
-                                    isPanelOpen={mobileChatOpen}
-                                    onUnreadChange={setUnread}
-                                />
-                            </div>
-                        </div>
                     </div>
-                </>
-            )}
-        </div>
     );
 }

@@ -25,7 +25,7 @@ const AVATAR_COLORS = {
     alya: "#ffffff",
 };
 
-const PUBLIC_OPEN_PHASES = ["LOBBY", "DAY_DISCUSSION", "VOTING", "AFTERNOON", "MORNING"];
+const PUBLIC_OPEN_PHASES = ["LOBBY", "DAY_DISCUSSION", "AFTERNOON", "MORNING"];
 const GNOSIA_OPEN_PHASES = ["DAY_DISCUSSION", "NIGHT"];
 
 function MsgBubble({ msg, isMe }) {
@@ -127,7 +127,7 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
 
     const pubOpen = PUBLIC_OPEN_PHASES.includes(phase);
     const gnOpen = isGnosia && GNOSIA_OPEN_PHASES.includes(phase);
-    const canSend = tab === "public" ? pubOpen : (isAlive && gnOpen);
+    const canSend = tab === "public" ? (pubOpen || !isAlive) : (isAlive && gnOpen);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -162,9 +162,19 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
             const shouldCount = !(isPanelOpen && tab === "gnosia");
             if (shouldCount) setUnreadGn(n => n + 1);
         } else {
-            setPubMsgs(p => [...p, formatted]);
-            const shouldCount = !(isPanelOpen && tab === "public");
-            if (shouldCount) setUnreadPub(n => n + 1);
+            // For public chat: filter based on alive/dead status
+            if (!isAlive && msg.isAlive === false) {
+                // Dead player receiving another dead player's message
+                setPubMsgs(p => [...p, formatted]);
+                const shouldCount = !(isPanelOpen && tab === "public");
+                if (shouldCount) setUnreadPub(n => n + 1);
+            } else if (isAlive) {
+                // Alive player receives all public messages (from alive players)
+                setPubMsgs(p => [...p, formatted]);
+                const shouldCount = !(isPanelOpen && tab === "public");
+                if (shouldCount) setUnreadPub(n => n + 1);
+            }
+            // Dead players don't see alive player messages in public chat
         }
     });
 
@@ -314,7 +324,8 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
                 )}
                 {!canSend ? (
                     <div style={{ textAlign: "center", fontSize: 9, color: "#2a1a3a", padding: "8px 0" }}>
-                        {tab === "public" && phase === "NIGHT" ? "SILENCE DURING NIGHT" : "CHANNEL CLOSED"}
+                        {tab === "public" && phase === "NIGHT" ? "SILENCE DURING NIGHT" : 
+                         tab === "public" && phase === "VOTING" ? "VOTING PHASE CANNOT TALK" : "CHANNEL CLOSED"}
                     </div>
                 ) : (
                     <div style={{ display: "flex", gap: 10 }}>

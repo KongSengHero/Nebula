@@ -25,7 +25,7 @@ const AVATAR_COLORS = {
 export default function PlayerCard({
     player, isMe, isSelected, canSelect, onSelect,
     phase, myRole, gnosiaAllies = [],
-    voteBreakdown = {}, allPlayers = [],
+    voteBreakdown = {}, allPlayers = [], compact = false,
 }) {
     const color = AVATAR_COLORS[player.profileId] || "#c8b8ff";
     const isAlly = gnosiaAllies.includes(player.id);
@@ -51,7 +51,7 @@ export default function PlayerCard({
                 disabled={!canSelect || isDead}
                 style={{
                     display: "flex", flexDirection: "column", alignItems: "center",
-                    gap: 12, padding: "16px 12px",
+                    gap: compact ? 6 : 12, padding: compact ? "8px 6px" : "16px 12px",
                     border: `1px solid ${borderColor}`,
                     background: isDead ? "#07000f" : `linear-gradient(135deg, ${bgColor}ee, ${bgColor}aa)`,
                     backdropFilter: "blur(12px)",
@@ -68,18 +68,19 @@ export default function PlayerCard({
 
                 {/* Badges */}
                 <div style={{
-                    position: "absolute", top: 6, right: 6, display: "flex",
-                    flexDirection: "column", gap: 3, alignItems: "flex-end",
+                    position: "absolute", top: compact ? 3 : 6, right: compact ? 3 : 6, display: "flex",
+                    flexDirection: "column", gap: 2, alignItems: "flex-end",
                 }}>
-                    {isMe && <span className="badge" style={{ color: "#00f5ff" }}>YOU</span>}
-                    {player.isHost && <span className="badge" style={{ color: "#ffd700" }}>HOST</span>}
-                    {isAlly && <span className="badge" style={{ color: "#9b30ff" }}>ALLY</span>}
-                    {player.inColdSleep && <span className="badge" style={{ color: "#4a3060" }}>COLD</span>}
+                    {isMe && <span className="badge" style={{ color: "#00f5ff", fontSize: compact ? 6 : 8 }}>YOU</span>}
+                    {player.isHost && <span className="badge" style={{ color: "#ffd700", fontSize: compact ? 6 : 8 }}>HOST</span>}
+                    {isAlly && <span className="badge" style={{ color: "#9b30ff", fontSize: compact ? 6 : 8 }}>ALLY</span>}
+                    {player.inColdSleep && <span className="badge" style={{ color: "#4a3060", fontSize: compact ? 6 : 8 }}>COLD</span>}
                 </div>
 
                 {/* Avatar */}
                 <div style={{
-                    width: 76, height: 76,
+                    width: compact ? 48 : 76, 
+                    height: compact ? 48 : 76,
                     border: `2px solid ${isDead ? "#1a0a2a" : color + "bb"}`,
                     background: color + "15",
                     borderRadius: "50%",
@@ -127,27 +128,29 @@ export default function PlayerCard({
                 {/* Name */}
                 <div style={{ textAlign: "center", width: "100%" }}>
                     <div style={{
-                        fontSize: 9, color: isDead ? "#2a1a3a" : color,
+                        fontSize: compact ? 7 : 9, color: isDead ? "#2a1a3a" : color,
                         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        marginBottom: 4,
+                        marginBottom: 2,
                     }}>
                         {player.username}
                     </div>
-                    <div style={{ fontSize: 7, color: "#4a3060" }}>
-                        {player.profileName || ""}
-                    </div>
+                    {!compact && (
+                        <div style={{ fontSize: 7, color: "#4a3060" }}>
+                            {player.profileName || ""}
+                        </div>
+                    )}
                 </div>
 
                 {/* Select CTA */}
                 {canSelect && !isDead && !isMe && (
                     <div style={{
-                        width: "100%", padding: "8px 0", textAlign: "center",
-                        fontSize: 8, letterSpacing: "0.1em",
+                        width: "100%", padding: compact ? "4px 0" : "8px 0", textAlign: "center",
+                        fontSize: compact ? 6 : 8, letterSpacing: "0.1em",
                         border: `1px solid ${isSelected ? "#00f5ff" : color + "44"}`,
-                        borderRadius: 8,
+                        borderRadius: 6,
                         color: isSelected ? "#07000f" : color,
                         background: isSelected ? "#00f5ff" : "rgba(0,0,0,0.4)",
-                        marginTop: 4,
+                        marginTop: 2,
                         transition: "all 0.2s",
                         fontWeight: isSelected ? "bold" : "normal",
                         textShadow: isSelected ? "none" : `0 0 10px ${color}88`,

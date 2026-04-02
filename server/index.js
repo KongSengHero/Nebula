@@ -255,21 +255,23 @@ io.on("connection", (socket) => {
         const { phase } = gs;
 
         if (channel === "public") {
-            if (phase === "NIGHT") return reply(cb, { success: false, error: "Public chat closed at night." });
-            const msg = buildMessage(sender, trimmed, "public");
-            
-            // Dead players can see ALL chat (alive and dead messages)
-            // Alive players only see alive player messages
+            // Dead players can chat at any time, but only dead players can see their messages
             if (!sender.alive) {
-                // Dead player message - only send to dead players
+                const msg = buildMessage(sender, trimmed, "public");
                 const deadPlayers = gs.players.filter(p => !p.alive).map(p => p.id);
                 deadPlayers.forEach(deadId => {
                     io.to(deadId).emit("chat:message", msg);
                 });
-            } else {
-                // Alive player message - send to everyone (alive AND dead can spectate)
-                io.to(roomId).emit("chat:message", msg);
+                return reply(cb, { success: true });
             }
+            
+            // Alive players follow normal phase restrictions
+            if (phase === "NIGHT") return reply(cb, { success: false, error: "Public chat closed at night." });
+            if (phase === "VOTING") return reply(cb, { success: false, error: "Public chat closed during voting." });
+            
+            const msg = buildMessage(sender, trimmed, "public");
+            // Alive player message - send to everyone (alive AND dead can spectate)
+            io.to(roomId).emit("chat:message", msg);
             return reply(cb, { success: true });
         }
 
@@ -330,6 +332,11 @@ io.on("connection", (socket) => {
         if (!target) return reply(cb, { success: false, error: "Invalid target." });
         if (targetId === socket.id) return reply(cb, { success: false, error: "Cannot vote yourself." });
 
+        // Check if voter has already voted (vote locking)
+        if (gs.votes[socket.id]) {
+            return reply(cb, { success: false, error: "Vote already locked. You cannot change your vote." });
+        }
+
         gs.votes[socket.id] = targetId;
         voter.voteTarget = targetId;
         reply(cb, { success: true });
@@ -342,6 +349,40 @@ io.on("connection", (socket) => {
         if (votesCast === totalAlive) {
             stateMachine.endVotingEarly(gs);
         }
+    });
+
+    // ── SKIP & VOTING ─────────────────────────────────────────────────
+    bindAckHandler("phase:skip", ({ roomId }, cb) => {
+        const gs = getRoom(roomId);
+        if (!gs) return reply(cb, { success: false, error: "Room not found." });
+        const player = gs.players.find(p => p.id === socket.id && p.alive);
+        if (!player) return reply(cb, { success: false, error: "Not allowed." });
+
+        if (gs.phase !== "DAY_DISCUSSION" && gs.phase !== "AFTERNOON") {
+            return reply(cb, { success: false, error: "Cannot skip right now." });
+        }
+
+        // Dedup: ignore if this player already voted to skip
+        if (gs.skipVotes[socket.id]) return reply(cb, { success: true });
+
+        gs.skipVotes[socket.id] = true;
+        const skipCount = Object.keys(gs.skipVotes).length;
+        const aliveCount = gs.players.filter(p => p.alive).length;
+
+        // Broadcast rich voter objects so every client can render avatars
+        // without needing a players-array lookup that can fail on reconnect.
+        const voterPayload = Object.keys(gs.skipVotes).map(id => {
+            const p = gs.players.find(x => x.id === id);
+            return p ? { id: p.id, username: p.username, profileId: p.profileId } : null;
+        }).filter(Boolean);
+        io.to(roomId).emit("phase:skip:updated", voterPayload);
+
+        // All alive players have voted to skip — advance phase exactly once.
+        if (skipCount >= aliveCount) {
+            gs.skipVotes = {};  // clear before advance so re-entrant calls are no-ops
+            stateMachine.forceAdvance(gs, null);
+        }
+        reply(cb, { success: true });
     });
 
     // ── NIGHT ACTIONS ─────────────────────────────────────────────────
