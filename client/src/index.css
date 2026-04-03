@@ -250,6 +250,11 @@ body,
   text-shadow: 0 0 12px #ffd700aa, 0 0 24px #ffd70044;
 }
 
+.text-gnosia {
+  color: #9b30ff;
+  text-shadow: 0 0 8px #9b30ff, 0 0 16px rgba(155, 48, 255, 0.4);
+}
+
 /* ── Animations ── */
 @keyframes fadeInUp {
   from {
@@ -295,6 +300,15 @@ body,
   50% {
     box-shadow: 0 0 24px #00f5ff88, 0 0 48px #00f5ff33;
   }
+}
+
+@keyframes pulseGnosia {
+  0%, 100% { box-shadow: 0 0 10px #9b30ff33; border-color: #9b30ff66; }
+  50% { box-shadow: 0 0 20px #9b30ffaa, 0 0 40px #9b30ff44; border-color: #9b30ff; }
+}
+
+.anim-pulseGnosia {
+  animation: pulseGnosia 1.2s ease-in-out infinite;
 }
 
 @keyframes scanLine {

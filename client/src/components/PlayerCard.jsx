@@ -18,9 +18,11 @@ export default function PlayerCard({
         .map(([voterId]) => allPlayers.find(p => p.id === voterId))
         .filter(Boolean);
 
-    let borderColor = isDead ? "#1a0a2a" : isSelected ? "#00f5ff" : isAlly ? "#9b30ff" : color + "44";
-    let bgColor = isDead ? "#07000f" : isSelected ? "#00f5ff0d" : isAlly ? "#13002533" : "#0d0020";
-    let shadow = isSelected ? "0 0 20px #00f5ff66, 0 0 40px #00f5ff22"
+    const isGnosiaTarget = phase === "NIGHT" && myRole === "gnosia" && isSelected;
+    let borderColor = isDead ? "#1a0a2a" : isGnosiaTarget ? "#9b30ff" : isSelected ? "#00f5ff" : isAlly ? "#9b30ff" : color + "44";
+    let bgColor = isDead ? "#07000f" : isGnosiaTarget ? "#9b30ff0d" : isSelected ? "#00f5ff0d" : isAlly ? "#13002533" : "#0d0020";
+    let shadow = isGnosiaTarget ? "0 0 24px #9b30ff66, 0 0 48px #9b30ff22"
+        : isSelected ? "0 0 20px #00f5ff66, 0 0 40px #00f5ff22"
         : isAlly ? "0 0 12px #9b30ff44"
             : canSelect && !isDead ? `0 0 10px ${color}22`
                 : "none";
@@ -106,11 +108,11 @@ export default function PlayerCard({
                     )}
                     {/* Selection ring */}
                     {isSelected && (
-                        <div style={{
+                        <div className={isGnosiaTarget ? "anim-pulseGnosia" : ""} style={{
                             position: "absolute", inset: -3,
-                            border: "2px solid #00f5ff",
+                            border: `2px solid ${isGnosiaTarget ? "#9b30ff" : "#00f5ff"}`,
                             borderRadius: "50%",
-                            animation: "pulseGlow 1.5s ease-in-out infinite",
+                            animation: isGnosiaTarget ? undefined : "pulseGlow 1.5s ease-in-out infinite",
                             pointerEvents: "none",
                         }} />
                     )}
@@ -146,7 +148,7 @@ export default function PlayerCard({
                         fontWeight: isSelected ? "bold" : "normal",
                         textShadow: isSelected ? "none" : `0 0 10px ${color}88`,
                     }}>
-                        {isSelected ? "✓ SELECTED" :
+                        {isSelected ? (isGnosiaTarget ? "TARGETED" : "✓ SELECTED") :
                             phase === "VOTING" ? "VOTE" : "SELECT"}
                     </div>
                 )}

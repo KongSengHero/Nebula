@@ -916,32 +916,34 @@ export default function Game({ session, socket, onLeaveRoom }) {
             {isMobile ? (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
 
-                    {/* Compact player row */}
-                    <div style={{ flexShrink: 0, borderBottom: "1px solid #1a0a2a", background: "#07000f", overflowY: "auto", maxHeight: 210 }}>
-                        <div style={{ padding: "10px 12px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                                <span style={{ fontSize: 8, color: "#4a3060" }}>CREW</span>
-                                <span style={{ fontSize: 8, color: "#4a3060" }}>{aliveCount}/{players.length}</span>
-                            </div>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                {players.map(p => (
-                                    <div key={p.id} style={{ width: 76, flexShrink: 0 }}>
-                                        <PlayerCard player={p}
-                                            isMe={p.id === myId}
-                                            isSelected={selectedTarget === p.id}
-                                            canSelect={me?.alive && canTarget(p)}
-                                            onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)}
-                                            phase={phase} myRole={myRole}
-                                            gnosiaAllies={allies.map(a => a.id)}
-                                            voteBreakdown={voteBreakdown}
-                                            allPlayers={players}
-                                            compact={true}
-                                        />
-                                    </div>
-                                ))}
+                    {/* Compact player row - Shown normally, hidden for Gnosia Focus Mode at night */}
+                    {!(isNight && myRole === "gnosia") && (
+                        <div style={{ flexShrink: 0, borderBottom: "1px solid #1a0a2a", background: "#07000f", overflowY: "auto", maxHeight: 210 }}>
+                            <div style={{ padding: "10px 12px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                    <span style={{ fontSize: 8, color: "#4a3060" }}>CREW</span>
+                                    <span style={{ fontSize: 8, color: "#4a3060" }}>{aliveCount}/{players.length}</span>
+                                </div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                    {players.map(p => (
+                                        <div key={p.id} style={{ width: 76, flexShrink: 0 }}>
+                                            <PlayerCard player={p}
+                                                isMe={p.id === myId}
+                                                isSelected={selectedTarget === p.id}
+                                                canSelect={me?.alive && canTarget(p)}
+                                                onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)}
+                                                phase={phase} myRole={myRole}
+                                                gnosiaAllies={allies.map(a => a.id)}
+                                                voteBreakdown={voteBreakdown}
+                                                allPlayers={players}
+                                                compact={true}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Mobile action bar */}
                     {isNight && me?.alive ? (
@@ -1001,15 +1003,29 @@ export default function Game({ session, socket, onLeaveRoom }) {
                     )}
 
                     {/* Chat fills remaining space on mobile */}
-                    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-                        <ChatPanel
-                            roomId={roomId} myRole={myRole}
-                            isAlive={me?.alive ?? true}
-                            phase={phase} socket={socket}
-                            isPanelOpen={true}
-                            onUnreadChange={setUnread}
-                        />
-                    </div>
+                    {!(isNight && me?.alive && myRole === "gnosia") && (
+                        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+                            <ChatPanel
+                                roomId={roomId} myRole={myRole}
+                                isAlive={me?.alive ?? true}
+                                phase={phase} socket={socket}
+                                isPanelOpen={true}
+                                onUnreadChange={setUnread}
+                            />
+                        </div>
+                    )}
+
+                    {isNight && me?.alive && myRole === "gnosia" && (
+                        <div style={{
+                            flexShrink: 0, padding: "12px 16px", background: "#0d0020",
+                            borderTop: "1px solid #1a0a2a", display: "flex", gap: 10
+                        }}>
+                            <button className="btn btn-secondary" style={{ flex: 1, fontSize: 8 }}
+                                onClick={() => setMobileChatOpen(true)}>
+                                💬 {unread.public + unread.gnosia > 0 ? `(${unread.public + unread.gnosia}) ` : ""}OPEN CHAT
+                            </button>
+                        </div>
+                    )}
 
                     {/* Mobile chat modal (slide-up overlay) */}
                     {mobileChatOpen && (

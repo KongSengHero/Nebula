@@ -36,11 +36,63 @@ const ROLE_META = {
     },
 };
 
-function TargetRow({ player, isSelected, label, color, onSelect }) {
+function TargetStatusCard({ player, color, title, status, isLocked }) {
+    const ac = player ? (AVATAR_COLORS[player.profileId] || "#c8b8ff") : "#4a3060";
+    return (
+        <div className="anim-fadeInUp" style={{
+            margin: "0 16px 12px", padding: "16px",
+            border: `1px solid ${isLocked ? color : color + "33"}`,
+            background: isLocked ? color + "0d" : "#07000f",
+            boxShadow: isLocked ? `0 0 24px ${color}22` : "none",
+            display: "flex", gap: 16, alignItems: "center",
+            position: "relative", overflow: "hidden"
+        }}>
+            {isLocked && (
+                <div style={{
+                    position: "absolute", top: 0, left: 0, width: 2, height: "100%",
+                    background: color, boxShadow: `0 0 10px ${color}`
+                }} />
+            )}
+            <div style={{
+                width: 52, height: 52, flexShrink: 0,
+                border: `2px solid ${isLocked ? color : ac + "55"}`,
+                background: ac + "15", borderRadius: "50%", overflow: "hidden",
+                display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+                {player ? (
+                    <img src={`/profiles/${player.profileId}.jpg`} alt={player.username}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
+                ) : (
+                    <span style={{ fontSize: 24, color: "#4a3060" }}>⏭</span>
+                )}
+                <div style={{
+                    display: "none", color: ac, fontSize: 18, fontWeight: "bold"
+                }}>
+                    {player?.username[0].toUpperCase() || "?"}
+                </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 8, color: "#4a3060", marginBottom: 6, letterSpacing: "0.1em" }}>{title}</div>
+                <div style={{ fontSize: 12, color: isLocked ? color : "#e0d4ff", textShadow: isLocked ? `0 0 10px ${color}aa` : "none" }}>
+                    {player ? player.username.toUpperCase() : "SKIP KILL"}
+                </div>
+                <div style={{ fontSize: 9, color: isLocked ? color : "#6a5080", marginTop: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                    {isLocked && <span style={{ fontSize: 10 }}>✓</span>}
+                    {status}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function TargetRow({ player, isSelected, label, color, onSelect, myRole }) {
     const ac = AVATAR_COLORS[player.profileId] || "#c8b8ff";
+    const isGnosia = myRole === "gnosia";
+    const size = isGnosia ? 36 : 44;
     return (
         <button onClick={() => onSelect(player.id)} style={{
-            display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", width: "100%",
+            display: "flex", alignItems: "center", gap: 14, padding: isGnosia ? "10px 12px" : "12px 14px", width: "100%",
             border: `1px solid ${isSelected ? color : "#1a0a2a"}`,
             background: isSelected ? color + "11" : "transparent",
             boxShadow: isSelected ? `0 0 16px ${color}44` : "none",
@@ -48,7 +100,7 @@ function TargetRow({ player, isSelected, label, color, onSelect }) {
             textAlign: "left",
         }}>
             <div style={{
-                width: 44, height: 44, flexShrink: 0,
+                width: size, height: size, flexShrink: 0,
                 border: `2px solid ${isSelected ? color : ac + "55"}`,
                 background: ac + "15", overflow: "hidden", position: "relative",
             }}>
@@ -58,19 +110,19 @@ function TargetRow({ player, isSelected, label, color, onSelect }) {
                 <div style={{
                     display: "none", position: "absolute", inset: 0,
                     alignItems: "center", justifyContent: "center",
-                    color: ac, fontSize: 16, fontWeight: "bold"
+                    color: ac, fontSize: isGnosia ? 14 : 16, fontWeight: "bold"
                 }}>
                     {player.username[0].toUpperCase()}
                 </div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                    fontSize: 10, color: isSelected ? color : "#e0d4ff",
+                    fontSize: isGnosia ? 9 : 10, color: isSelected ? color : "#e0d4ff",
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
                 }}>
                     {player.username}
                 </div>
-                <div style={{ fontSize: 8, color: "#4a3060", marginTop: 4 }}>
+                <div style={{ fontSize: isGnosia ? 7 : 8, color: "#4a3060", marginTop: 4 }}>
                     {player.profileName || ""}
                 </div>
             </div>
@@ -100,61 +152,55 @@ export default function NightPanel({
     return (
         <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
-            {/* Role header */}
-            <div style={{
-                padding: "20px 20px 16px", flexShrink: 0,
-                borderBottom: "1px solid #1a0a2a",
-                background: color + "08",
-            }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
-                    <span style={{ fontSize: 28, filter: `drop-shadow(0 0 10px ${color})` }}>
-                        {meta.icon}
-                    </span>
-                    <div>
-                        <div style={{ fontSize: 8, color: "#4a3060", marginBottom: 4 }}>NIGHT ACTION</div>
-                        <div style={{ fontSize: 11, color }}>{meta.heading}</div>
-                    </div>
-                </div>
-                <p style={{ fontSize: 8, color: "#6a5080", lineHeight: 1.8 }}>{meta.instruction}</p>
-            </div>
-
-            {/* Gnosia allies */}
-            {myRole === "gnosia" && gnosiaAllies.length > 0 && (
+            {/* Gnosia-specific Micro-header / Others get full header */}
+            {myRole === "gnosia" ? (
                 <div style={{
-                    padding: "10px 16px", flexShrink: 0,
-                    borderBottom: "1px solid #1a0a2a", background: "#13002533",
-                    display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap"
-                }}>
-                    <span style={{ fontSize: 8, color: "#9b30ff" }}>ALLIES:</span>
-                    {gnosiaAllies.map(a => (
-                        <span key={a.id} style={{
-                            fontSize: 8, color: "#c8b8ff",
-                            border: "1px solid #9b30ff33", padding: "3px 10px"
-                        }}>
-                            {a.username}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            {/* Gnosia vote progress */}
-            {myRole === "gnosia" && gnosiaVoteProgress.totalGnosia > 0 && (
-                <div style={{
-                    padding: "10px 16px", flexShrink: 0,
+                    padding: "14px 16px", flexShrink: 0,
                     borderBottom: "1px solid #1a0a2a",
-                    display: "flex", alignItems: "center", gap: 12
+                    background: color + "08",
+                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10
                 }}>
-                    <div style={{ flex: 1, height: 4, background: "#1a0030", borderRadius: 2 }}>
-                        <div style={{
-                            height: "100%", borderRadius: 2, background: "#9b30ff",
-                            boxShadow: "0 0 8px #9b30ff",
-                            width: `${(gnosiaVoteProgress.votesIn / gnosiaVoteProgress.totalGnosia) * 100}%`,
-                            transition: "width 0.4s",
-                        }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 18, filter: `drop-shadow(0 0 10px ${color})` }}>{meta.icon}</span>
+                        <span style={{ fontSize: 9, color }}>{meta.heading}</span>
                     </div>
-                    <span style={{ fontSize: 8, color: "#9b30ff", flexShrink: 0 }}>
-                        {gnosiaVoteProgress.votesIn}/{gnosiaVoteProgress.totalGnosia}
-                    </span>
+
+                    {/* Progress / Allies mini status (Gnosia only) */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        {gnosiaVoteProgress.totalGnosia > 0 && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <div style={{ width: 40, height: 3, background: "#1a0030", borderRadius: 1 }}>
+                                    <div style={{
+                                        height: "100%", background: "#9b30ff", boxShadow: "0 0 6px #9b30ff",
+                                        width: `${(gnosiaVoteProgress.votesIn / gnosiaVoteProgress.totalGnosia) * 100}%`,
+                                    }} />
+                                </div>
+                                <span style={{ fontSize: 8, color: "#9b30ff" }}>{gnosiaVoteProgress.votesIn}/{gnosiaVoteProgress.totalGnosia}</span>
+                            </div>
+                        )}
+                        {gnosiaAllies.length > 0 && (
+                            <div style={{ display: "flex", gap: 4 }}>
+                                {gnosiaAllies.map(a => (
+                                    <div key={a.id} title={a.username} style={{ width: 4, height: 4, background: "#9b30ff", borderRadius: "50%" }} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                <div style={{
+                    padding: "18px 20px 14px", flexShrink: 0,
+                    borderBottom: "1px solid #1a0a2a",
+                    background: color + "08",
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
+                        <span style={{ fontSize: 24, filter: `drop-shadow(0 0 10px ${color})` }}>{meta.icon}</span>
+                        <div>
+                            <div style={{ fontSize: 7, color: "#4a3060", marginBottom: 3 }}>NIGHT ACTION</div>
+                            <div style={{ fontSize: 10, color }}>{meta.heading}</div>
+                        </div>
+                    </div>
+                    <p style={{ fontSize: 8, color: "#6a5080", lineHeight: 1.6 }}>{meta.instruction}</p>
                 </div>
             )}
 
@@ -210,8 +256,19 @@ export default function NightPanel({
                 </div>
             )}
 
+            {/* Coordination / Submited Status for Gnosia/Special Roles */}
+            {myRole === "gnosia" && (selectedTarget || submitted) && (
+                <TargetStatusCard
+                    player={players.find(p => p.id === selectedTarget)}
+                    color={color}
+                    title={submitted ? "ELIMINATION PROTOCOL" : "COORDINATION STATUS"}
+                    status={submitted ? "KILL REQUEST LOCKED" : "STAKING TARGET..."}
+                    isLocked={submitted}
+                />
+            )}
+
             {/* Target list */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "8px 8px" }}>
                 {myRole === "human" || myRole === "traitor" ? (
                     <div style={{
                         height: "100%", display: "flex", alignItems: "center",
@@ -225,8 +282,12 @@ export default function NightPanel({
                         height: "100%", display: "flex", alignItems: "center",
                         justifyContent: "center", flexDirection: "column", gap: 14
                     }}>
-                        <div style={{ fontSize: 36, color, filter: `drop-shadow(0 0 12px ${color})` }}>✓</div>
-                        <div style={{ fontSize: 10, color }}>ACTION SUBMITTED</div>
+                        {myRole !== "gnosia" && (
+                            <>
+                                <div style={{ fontSize: 36, color, filter: `drop-shadow(0 0 12px ${color})` }}>✓</div>
+                                <div style={{ fontSize: 10, color }}>ACTION SUBMITTED</div>
+                            </>
+                        )}
                         <div style={{ fontSize: 9, color: "#4a3060" }}>Awaiting others...</div>
                         {actionMsg && <div style={{ fontSize: 9, color }}>{actionMsg}</div>}
                     </div>
@@ -246,6 +307,7 @@ export default function NightPanel({
                             <TargetRow key={p.id} player={p}
                                 isSelected={selectedTarget === p.id}
                                 label={meta.actionLabel} color={color}
+                                myRole={myRole}
                                 onSelect={id => onSelect(selectedTarget === id ? null : id)} />
                         ))}
                     </div>
