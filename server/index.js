@@ -454,6 +454,35 @@ io.on("connection", (socket) => {
         }
     });
 
+    bindAckHandler("player:rollAura", ({ roomId }, cb) => {
+        console.log(`[ROLL] Attempting roll for socket ${socket.id} in room ${roomId}`);
+        const gs = getRoom(roomId);
+        if (!gs) return reply(cb, { success: false, error: "Room not found." });
+        const player = gs.players.find(p => p.id === socket.id);
+        if (!player) return reply(cb, { success: false, error: "Player not found." });
+        console.log(`[ROLL] Player ${player.username}: alive=${player.alive}, rollsRemaining=${player.rollsRemaining}`);
+        if (player.alive && !player.inColdSleep) return reply(cb, { success: false, error: "Only the departed may roll." });
+        if (player.rollsRemaining <= 0) return reply(cb, { success: false, error: "No rolls remaining this round." });
+
+        const auras = [
+            "aura-rage-mode", 
+            "aura-golden-saiyan", 
+            "aura-glacier",
+            "aura-sunset",
+            "aura-glitch",
+            "aura-sparkle-white",
+            "aura-sparkle-yellow",
+            "aura-sparkle-pink"
+        ];
+        const picked = auras[Math.floor(Math.random() * auras.length)];
+        player.aura = picked;
+        player.rollsRemaining = (player.rollsRemaining || 2) - 1;
+        console.log(`[ROLL] Success: ${player.username} got ${picked}, rolls remaining: ${player.rollsRemaining}`);
+
+        io.to(roomId).emit("player:auraUpdated", { playerId: socket.id, aura: picked, rollsRemaining: player.rollsRemaining });
+        reply(cb, { success: true, aura: picked, rollsRemaining: player.rollsRemaining });
+    });
+
     // ── HOST DEBUG ────────────────────────────────────────────────────
     bindAckHandler("phase:forceAdvance", ({ roomId }, cb) => {
         const gs = getRoom(roomId);

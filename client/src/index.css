@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-/* ── Google Font loaded in index.html ── */
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -21,7 +19,6 @@ body,
   overflow-x: hidden;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -40,19 +37,19 @@ body,
   background: #00f5ff55;
 }
 
-/* ── CRT scanline ── */
 .crt::after {
   content: "";
   position: fixed;
   inset: 0;
   background: repeating-linear-gradient(0deg,
-      transparent, transparent 2px,
-      rgba(0, 0, 0, 0.07) 2px, rgba(0, 0, 0, 0.07) 4px);
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.07) 2px,
+      rgba(0, 0, 0, 0.07) 4px);
   pointer-events: none;
   z-index: 9999;
 }
 
-/* ── Star field ── */
 .star-bg {
   background-image:
     radial-gradient(1px 1px at 8% 12%, #fff3 0%, transparent 100%),
@@ -67,7 +64,6 @@ body,
   background-color: #0c0020;
 }
 
-/* ── Panels ── */
 .panel {
   background: #170033;
   border: 1px solid #2a1a4a;
@@ -92,7 +88,6 @@ body,
   border: 1px solid #ff2a2a44;
 }
 
-/* ── Buttons ── */
 .btn {
   font-family: "Press Start 2P", monospace;
   font-size: 10px;
@@ -166,7 +161,6 @@ body,
   box-shadow: 0 0 24px #ffd700aa;
 }
 
-/* ── Inputs ── */
 .input {
   font-family: "Press Start 2P", monospace;
   font-size: 10px;
@@ -194,7 +188,6 @@ body,
   padding: 9px 12px;
 }
 
-/* ── Toggle ── */
 .toggle {
   appearance: none;
   width: 44px;
@@ -229,7 +222,6 @@ body,
   box-shadow: 0 0 8px #00f5ff;
 }
 
-/* ── Glows ── */
 .glow-cyan {
   color: #00f5ff;
   text-shadow: 0 0 12px #00f5ffaa, 0 0 24px #00f5ff44;
@@ -255,7 +247,6 @@ body,
   text-shadow: 0 0 8px #9b30ff, 0 0 16px rgba(155, 48, 255, 0.4);
 }
 
-/* ── Animations ── */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -303,8 +294,17 @@ body,
 }
 
 @keyframes pulseGnosia {
-  0%, 100% { box-shadow: 0 0 10px #9b30ff33; border-color: #9b30ff66; }
-  50% { box-shadow: 0 0 20px #9b30ffaa, 0 0 40px #9b30ff44; border-color: #9b30ff; }
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px #9b30ff33;
+    border-color: #9b30ff66;
+  }
+
+  50% {
+    box-shadow: 0 0 20px #9b30ffaa, 0 0 40px #9b30ff44;
+    border-color: #9b30ff;
+  }
 }
 
 .anim-pulseGnosia {
@@ -340,14 +340,17 @@ body,
     transform: translateX(120%);
     opacity: 0;
   }
+
   12% {
     transform: translateX(0%);
     opacity: 1;
   }
+
   78% {
     transform: translateX(0%);
     opacity: 1;
   }
+
   100% {
     transform: translateX(-120%);
     opacity: 0;
@@ -359,6 +362,7 @@ body,
     transform: translateX(18px);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -381,7 +385,6 @@ body,
   animation: urgentPulse 0.6s ease-in-out infinite;
 }
 
-/* ── Badge ── */
 .badge {
   font-size: 8px;
   padding: 3px 7px;
@@ -390,9 +393,785 @@ body,
   line-height: 1.4;
 }
 
-/* ── Divider ── */
-.divider {
-  border: none;
-  border-top: 1px solid #1a0a2a;
-  margin: 0;
+/* Aura cards */
+.player-card-frame {
+  overflow: visible;
+}
+
+.player-card-frame::before,
+.player-card-frame::after,
+.avatar-aura::before,
+.avatar-aura::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.has-aura::before {
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.5px;
+  z-index: 0;
+  opacity: 1;
+  background-size: 240% 240%;
+  animation: borderLineFlow 2.8s linear infinite;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.has-aura::after {
+  inset: 2px;
+  border-radius: 14px;
+  z-index: 0;
+  opacity: 1;
+}
+
+.player-card-frame.aura-rage-mode::before,
+.avatar-aura.aura-rage-mode::before {
+  background-image: linear-gradient(
+    120deg,
+    rgba(8, 8, 8, 0.96) 0%,
+    rgba(255, 255, 255, 0.98) 16%,
+    rgba(20, 20, 20, 0.92) 32%,
+    rgba(252, 252, 252, 0.94) 50%,
+    rgba(10, 10, 10, 0.94) 66%,
+    rgba(255, 255, 255, 0.98) 84%,
+    rgba(14, 14, 14, 0.94) 100%
+  );
+}
+
+.player-card-frame.aura-rage-mode::after {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 18px rgba(255, 255, 255, 0.08);
+}
+
+.avatar-aura.aura-rage-mode::after {
+  inset: -10px;
+  border-radius: 50%;
+  opacity: 1;
+  box-shadow:
+    0 0 14px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.player-card-frame.aura-golden-saiyan::before,
+.avatar-aura.aura-golden-saiyan::before {
+  background-image: linear-gradient(120deg,
+      rgba(140, 92, 0, 0.96) 0%,
+      rgba(255, 246, 180, 0.98) 18%,
+      rgba(255, 192, 0, 0.94) 34%,
+      rgba(255, 250, 200, 0.96) 52%,
+      rgba(230, 155, 0, 0.94) 70%,
+      rgba(255, 238, 150, 0.98) 86%,
+      rgba(168, 105, 0, 0.96) 100%);
+}
+
+.player-card-frame.aura-golden-saiyan::after {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 225, 130, 0.14),
+    0 0 22px rgba(255, 208, 47, 0.18);
+}
+
+.avatar-aura.aura-golden-saiyan::after {
+  inset: -11px;
+  border-radius: 50%;
+  opacity: 1;
+  box-shadow:
+    0 0 18px rgba(255, 208, 47, 0.22),
+    inset 0 0 0 1px rgba(255, 236, 160, 0.1);
+}
+
+.player-card-frame.aura-glacier::before,
+.avatar-aura.aura-glacier::before {
+  background-image: linear-gradient(120deg,
+      rgba(23, 72, 99, 0.96) 0%,
+      rgba(219, 250, 255, 0.98) 20%,
+      rgba(95, 222, 255, 0.92) 38%,
+      rgba(244, 253, 255, 0.96) 56%,
+      rgba(74, 182, 228, 0.92) 74%,
+      rgba(224, 250, 255, 0.98) 88%,
+      rgba(18, 88, 130, 0.96) 100%);
+}
+
+.player-card-frame.aura-glacier::after {
+  box-shadow:
+    inset 0 0 0 1px rgba(178, 240, 255, 0.1),
+    0 0 22px rgba(96, 216, 255, 0.18);
+}
+
+.avatar-aura.aura-glacier::after {
+  inset: -11px;
+  border-radius: 50%;
+  opacity: 1;
+  box-shadow:
+    0 0 18px rgba(96, 216, 255, 0.2),
+    inset 0 0 0 1px rgba(228, 250, 255, 0.1);
+}
+
+.player-card-frame.aura-sunset::before,
+.avatar-aura.aura-sunset::before {
+  background-image: linear-gradient(
+    90deg, 
+    #ff4500 0%, 
+    #ff8c00 50%, 
+    #ff4500 100%
+  );
+}
+
+.player-card-frame.aura-glitch::before,
+.avatar-aura.aura-glitch::before {
+  background-image: repeating-linear-gradient(
+    90deg,
+    #00ff00 0 2px,
+    #000 2px 4px,
+    #ff00ff 4px 6px,
+    #000 6px 8px
+  );
+  animation: borderLineFlow 0.6s steps(4) infinite;
+  opacity: 0.8;
+}
+
+.player-card-frame.aura-sparkle-white::before,
+.avatar-aura.aura-sparkle-white::before {
+  background-image: linear-gradient(120deg, #fff 0%, #aaa 100%);
+  opacity: 0.5;
+}
+
+.player-card-frame.aura-sparkle-yellow::before,
+.avatar-aura.aura-sparkle-yellow::before {
+  background-image: linear-gradient(120deg, #fff62d 0%, #ff8c00 100%);
+  opacity: 0.5;
+}
+
+.player-card-frame.aura-sparkle-pink::before,
+.avatar-aura.aura-sparkle-pink::before {
+  background-image: linear-gradient(120deg, #ff69b4 0%, #ff1493 100%);
+  opacity: 0.5;
+}
+
+/* Avatar aura */
+.avatar-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  isolation: isolate;
+}
+
+.avatar-aura::before {
+  inset: -4px;
+  padding: 2px;
+  border-radius: 50%;
+  z-index: 1;
+  opacity: 1;
+  background-size: 240% 240%;
+  animation: borderLineFlow 2.25s linear infinite;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.avatar-aura-field {
+  position: absolute;
+  inset: -70px -30px -18px -30px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.avatar-aura-field::before {
+  content: "";
+  position: absolute;
+  inset: 2% 16% 8% 16%;
+  clip-path: polygon(50% 0%,
+      66% 10%,
+      80% 24%,
+      92% 48%,
+      100% 100%,
+      0% 100%,
+      8% 48%,
+      20% 24%,
+      34% 10%);
+  opacity: 0.66;
+  filter: blur(12px);
+}
+
+.aura-rage-mode .avatar-aura-field::before {
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.14) 22%,
+      rgba(24, 24, 24, 0.26) 58%,
+      transparent 100%);
+}
+
+.aura-golden-saiyan .avatar-aura-field::before {
+  background: linear-gradient(180deg,
+      rgba(255, 239, 154, 0.36) 0%,
+      rgba(255, 209, 58, 0.24) 26%,
+      rgba(255, 183, 0, 0.18) 64%,
+      transparent 100%);
+}
+
+.aura-glacier .avatar-aura-field::before {
+  background: linear-gradient(180deg,
+      rgba(222, 249, 255, 0.34) 0%,
+      rgba(137, 231, 255, 0.22) 28%,
+      rgba(45, 132, 176, 0.2) 66%,
+      transparent 100%);
+}
+
+.avatar-aura-core {
+  position: absolute;
+  inset: 20% 18% 12% 18%;
+  border-radius: 44% 44% 34% 34% / 58% 58% 42% 42%;
+  animation: auraCoreBreath 1.55s ease-in-out infinite;
+}
+
+.aura-rage-mode .avatar-aura-core {
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.12) 32%,
+      rgba(22, 22, 22, 0.18) 68%,
+      transparent 76%);
+  filter: blur(11px);
+}
+
+.aura-golden-saiyan .avatar-aura-core {
+  background: linear-gradient(180deg,
+      rgba(255, 242, 164, 0.46) 0%,
+      rgba(255, 214, 79, 0.28) 34%,
+      rgba(255, 183, 0, 0.16) 72%,
+      transparent 86%);
+  filter: blur(11px);
+}
+
+.aura-glacier .avatar-aura-core {
+  background: linear-gradient(180deg,
+      rgba(219, 249, 255, 0.36) 0%,
+      rgba(135, 232, 255, 0.24) 34%,
+      rgba(36, 126, 177, 0.16) 74%,
+      transparent 88%);
+  filter: blur(10px);
+}
+
+.aura-column {
+  position: absolute;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+}
+
+.aura-blade {
+  position: absolute;
+  left: 50%;
+  bottom: 0%;
+  width: var(--blade-width);
+  height: var(--blade-height);
+  transform: translate(-50%, 12px) rotate(var(--blade-rotate)) scaleY(0.68);
+  transform-origin: 50% 100%;
+  clip-path: polygon(50% 0%,
+      58% 12%,
+      70% 40%,
+      82% 78%,
+      100% 100%,
+      66% 84%,
+      50% 100%,
+      34% 84%,
+      0% 100%,
+      18% 78%,
+      30% 40%,
+      42% 12%);
+  animation: auraBladeSurge 0.48s ease-in-out infinite;
+  animation-delay: var(--delay);
+  opacity: 0.84;
+}
+
+.aura-blade::before,
+.aura-blade::after {
+  content: "";
+  position: absolute;
+}
+
+.aura-blade::before {
+  inset: 10% 22% 14% 22%;
+  clip-path: polygon(50% 0%,
+      66% 10%,
+      82% 44%,
+      100% 100%,
+      66% 78%,
+      50% 100%,
+      34% 78%,
+      0% 100%,
+      18% 44%,
+      34% 10%);
+  opacity: 0.94;
+}
+
+.aura-blade::after {
+  left: 50%;
+  bottom: 6%;
+  width: 58%;
+  height: 46%;
+  transform: translateX(-50%);
+  filter: blur(6px);
+  opacity: 0.58;
+}
+
+.aura-rage-mode .aura-blade {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.88) 24%,
+    rgba(28, 28, 28, 0.82) 66%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.12));
+  animation-duration: 0.2s; /*change blade speed of aura mode here sak */
+}
+
+.aura-rage-mode .aura-blade::before {
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.98) 0%,
+      rgba(18, 18, 18, 0.92) 68%,
+      transparent 100%);
+}
+
+.aura-rage-mode .aura-blade::after {
+  background: linear-gradient(180deg,
+      rgba(0, 0, 0, 0.72) 0%,
+      rgba(255, 255, 255, 0.14) 82%,
+      transparent 100%);
+}
+
+.aura-golden-saiyan .aura-blade {
+  background: linear-gradient(180deg,
+      rgba(255, 252, 212, 1) 0%,
+      rgba(255, 224, 92, 0.96) 24%,
+      rgba(255, 182, 0, 0.84) 70%,
+      rgba(255, 244, 180, 0) 100%);
+  filter: drop-shadow(0 0 10px rgba(255, 208, 47, 0.28));
+  animation-duration: 0.2s; /*change speed of super sayain*/
+}
+
+.aura-golden-saiyan .aura-blade::before {
+  background: linear-gradient(180deg,
+      rgba(255, 250, 204, 0.95) 0%,
+      rgba(255, 214, 79, 0.24) 76%,
+      transparent 100%);
+}
+
+.aura-golden-saiyan .aura-blade::after {
+  background: linear-gradient(180deg,
+      rgba(255, 204, 45, 0.42) 0%,
+      rgba(255, 240, 155, 0.18) 82%,
+      transparent 100%);
+}
+
+.aura-glacier .aura-blade {
+  clip-path: polygon(50% 0%,
+      64% 16%,
+      80% 58%,
+      64% 100%,
+      50% 76%,
+      36% 100%,
+      20% 58%,
+      36% 16%);
+  background: linear-gradient(180deg,
+      rgba(236, 252, 255, 0.98) 0%,
+      rgba(168, 239, 255, 0.9) 34%,
+      rgba(67, 172, 220, 0.78) 72%,
+      rgba(201, 249, 255, 0) 100%);
+  filter: drop-shadow(0 0 9px rgba(116, 223, 255, 0.2));
+  animation-duration: 0.95s;
+}
+
+.aura-glacier .aura-blade::before {
+  clip-path: polygon(50% 0%,
+      72% 18%,
+      86% 52%,
+      70% 100%,
+      50% 78%,
+      30% 100%,
+      14% 52%,
+      28% 18%);
+  background: linear-gradient(180deg,
+      rgba(249, 254, 255, 1) 0%,
+      rgba(182, 244, 255, 0.7) 62%,
+      transparent 100%);
+}
+
+.aura-glacier .aura-blade::after {
+  background: linear-gradient(180deg,
+      rgba(68, 192, 240, 0.3) 0%,
+      rgba(227, 250, 255, 0.16) 84%,
+      transparent 100%);
+}
+
+.glacier-haze {
+  position: absolute;
+  inset: 48% 14% 2% 14%;
+  background: radial-gradient(ellipse at center,
+      rgba(221, 249, 255, 0.34) 0%,
+      rgba(109, 216, 255, 0.2) 34%,
+      transparent 78%);
+  filter: blur(14px);
+  animation: glacierMist 3.4s ease-in-out infinite;
+}
+
+.rage-face-mask {
+  position: absolute;
+  inset: 0%;
+  z-index: 3;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.8) 40%, rgba(0,0,0,0.4) 100%);
+  clip-path: ellipse(48% 54% at 50% 45%);
+  mix-blend-mode: multiply;
+  opacity: 0.94;
+  filter: contrast(1.5) blur(2px);
+}
+
+.aura-glitch-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.aura-glitch-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  font-weight: 900;
+  color: #00ff00;
+  text-shadow: 2px 0 rgba(255,0,255,0.7), -2px 0 rgba(0,255,255,0.7);
+  animation: glitchLoop 4s infinite;
+}
+
+.aura-glitch-crack {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 100% 4px;
+  opacity: 0.2;
+}
+
+.aura-glitch-crack::before {
+  content: "///";
+  position: absolute;
+  top: 20%;
+  left: 20%;
+  font-size: 30px;
+  color: rgba(255,255,255,0.1);
+  transform: rotate(45deg);
+}
+
+@keyframes glitchLoop {
+  0%, 100% { color: #00ff00; opacity: 1; transform: translate(-50%, -50%) skew(0); }
+  33% { color: #000; opacity: 0.8; transform: translate(-52%, -50%) skew(5deg); }
+  35% { color: #00ff00; opacity: 1; transform: translate(-48%, -50%) skew(-5deg); }
+  66% { color: #000; opacity: 0.8; transform: translate(-50%, -48%) scaleY(1.1); }
+}
+
+.aura-sparkle-white .aura-blade,
+.aura-sparkle-yellow .aura-blade,
+.aura-sparkle-pink .aura-blade {
+  border-radius: 50%;
+  clip-path: none !important;
+  animation-duration: 4s;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+.aura-sparkle-white .aura-blade:nth-child(3n+1),
+.aura-sparkle-yellow .aura-blade:nth-child(3n+1),
+.aura-sparkle-pink .aura-blade:nth-child(3n+1) {
+  animation-name: sparkleFloatA;
+  animation-duration: 1.8s;
+}
+
+.aura-sparkle-white .aura-blade:nth-child(3n+2),
+.aura-sparkle-yellow .aura-blade:nth-child(3n+2),
+.aura-sparkle-pink .aura-blade:nth-child(3n+2) {
+  animation-name: sparkleFloatB;
+  animation-duration: 4.5s;
+}
+
+.aura-sparkle-white .aura-blade:nth-child(3n+3),
+.aura-sparkle-yellow .aura-blade:nth-child(3n+3),
+.aura-sparkle-pink .aura-blade:nth-child(3n+3) {
+  animation-name: sparkleFloatC;
+  animation-duration: 4.2s;
+}
+
+.aura-sparkle-white .aura-blade {
+  background: white !important;
+  box-shadow: 0 0 8px white;
+  color: white;
+}
+
+.aura-sparkle-yellow .aura-blade {
+  background: #fff62d !important;
+  box-shadow: 0 0 8px #fff62d;
+  color: #fff62d;
+}
+
+.aura-sparkle-pink .aura-blade {
+  background: #ff69b4 !important;
+  box-shadow: 0 0 10px #ff69b4;
+  color: #ff69b4;
+}
+
+@keyframes sparkleFloatA {
+  0%, 100% { transform: translate(-50%, 0) scale(0.9); opacity: 0.3; filter: blur(0.5px); }
+  50% { transform: translate(calc(-50% + 8px), -10px) scale(1.1); opacity: 1; filter: blur(0px); box-shadow: 0 0 10px currentColor; }
+}
+
+@keyframes sparkleFloatB {
+  0%, 100% { transform: translate(-50%, 0) scale(0.8); opacity: 0.2; filter: blur(1px); }
+  50% { transform: translate(calc(-50% - 10px), -6px) scale(1.05); opacity: 0.9; filter: blur(0px); box-shadow: 0 0 8px currentColor; }
+}
+
+@keyframes sparkleFloatC {
+  0%, 100% { transform: translate(-50%, 0) scale(0.95); opacity: 0.4; filter: blur(0.3px); }
+  50% { transform: translate(calc(-50% - 3px), -14px) scale(1.15); opacity: 1; filter: blur(0px); box-shadow: 0 0 14px currentColor; }
+}
+
+/* Rage eyes */
+.rage-eyes {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  width: 44%;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  z-index: 10;
+  pointer-events: none;
+  animation: rageMadVibe 0.35s infinite;
+}
+
+.rage-eye {
+  position: relative;
+  width: 80px;
+  height: 30px;
+  background: black;
+  /* Hand-drawn sketchy circle */
+  clip-path: polygon(50% 0%, 75% 5%, 95% 25%, 100% 50%, 95% 75%, 75% 95%, 50% 100%, 25% 95%, 5% 75%, 0% 50%, 5% 25%, 25% 5%);
+  filter: drop-shadow(0 0 15px white);
+}
+
+.rage-eye--left { transform: rotate(-5deg); }
+.rage-eye--right { transform: rotate(5deg); }
+
+.rage-eye::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: white;
+  border-radius: 48%; /* Slightly not perfect circle */
+  filter: blur(1px) drop-shadow(0 0 18px white);
+  animation: rageFireEyeFlicker 0.15s infinite;
+}
+
+.rage-eye::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid white;
+  border-radius: 48%;
+  opacity: 0.3;
+  animation: flicker 0.2s infinite;
+}
+
+.rage-eye__pupil {
+  display: none; /* No eyeball as requested */
+}
+
+/* Golden crown */
+.golden-crown {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  width: 46px;
+  height: 28px;
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+  animation: crownFloat 1.8s ease-in-out infinite;
+}
+
+.golden-crown__base {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 3px;
+  height: 9px;
+  border-radius: 999px 999px 4px 4px;
+  background: linear-gradient(180deg, #fff8c2 0%, #ffd85a 35%, #d89f00 100%);
+  box-shadow: 0 0 10px rgba(255, 208, 47, 0.34);
+}
+
+.golden-crown__point {
+  position: absolute;
+  bottom: 10px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 15px solid #ffd44e;
+  filter: drop-shadow(0 0 6px rgba(255, 208, 47, 0.4));
+}
+
+.golden-crown__point--left {
+  left: 1px;
+}
+
+.golden-crown__point--center {
+  left: 16px;
+  border-left-width: 7px;
+  border-right-width: 7px;
+  border-bottom-width: 18px;
+}
+
+.golden-crown__point--right {
+  right: 1px;
+}
+
+.golden-crown__gem {
+  position: absolute;
+  left: 50%;
+  bottom: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffdf0 0%, #ffe173 60%, #f6b800 100%);
+  transform: translateX(-50%);
+  box-shadow: 0 0 8px rgba(255, 235, 168, 0.5);
+}
+
+/* Dead aura overlay */
+.avatar-dead-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(0, 0, 0, 0.18) 42%,
+      rgba(58, 0, 0, 0.28) 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.avatar-dead-mark {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  z-index: 4;
+  font-size: 10px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 0 8px rgba(255, 0, 0, 0.32);
+}
+
+/* Aura motion */
+@keyframes borderLineFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 220% 50%;
+  }
+}
+
+@keyframes auraCoreBreath {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 0.78;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes auraBladeSurge {
+
+  0%,
+  100% {
+    transform: translate(-50%, 12px) rotate(var(--blade-rotate)) scaleY(0.68);
+    opacity: 0.7;
+  }
+
+  42% {
+    transform: translate(-50%, calc(-1 * var(--blade-thrust))) rotate(var(--blade-rotate)) scaleY(1.26);
+    opacity: 1;
+  }
+
+  68% {
+    transform: translate(-50%, calc(-0.35 * var(--blade-thrust))) rotate(var(--blade-rotate)) scaleY(0.9);
+    opacity: 0.84;
+  }
+}
+
+@keyframes borderFireFlow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 0% 100%; }
+}
+
+@keyframes rageMadVibe {
+  0%, 100% { transform: translate(-50%, calc(-50% - 1px)) rotate(0deg); }
+  25% { transform: translate(calc(-50% - 0.5px), calc(-50% + 0.5px)) rotate(-0.3deg); }
+  50% { transform: translate(-50%, calc(-50% + 1px)) rotate(0.3deg); }
+  75% { transform: translate(calc(-50% + 0.5px), calc(-50% - 0.5px)) rotate(-0.3deg); }
+}
+
+@keyframes rageFireEyeFlicker {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes glacierMist {
+
+  0%,
+  100% {
+    opacity: 0.52;
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 0.82;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes crownFloat {
+
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  50% {
+    transform: translateX(-50%) translateY(-2px);
+  }
 }

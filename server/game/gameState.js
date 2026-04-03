@@ -17,6 +17,8 @@ function createPlayer(socketId, username, profileId, isHost = false, sessionToke
         protected: false,
         scanned: false,
         dismissed: false,
+        aura: null,           // Equipped aura CSS class; persists until rerolled
+        rollsRemaining: 0,   // Start with 0, get 2 when die, 1 per subsequent round
     };
 }
 
@@ -66,10 +68,26 @@ function createGameState(roomId, settings = {}) {
 }
 
 function resetNightFlags(gameState) {
+    console.log(`[RESET] Resetting night flags for round ${gameState.round}`);
     for (const player of gameState.players) {
         player.protected = false;
         player.scanned = false;
         player.voteTarget = null;
+        
+        // Ensure rollsRemaining exists
+        if (typeof player.rollsRemaining !== 'number') {
+            player.rollsRemaining = 0;
+        }
+        
+        // Give 1 roll per round to dead players (except first round after death)
+        if (!player.alive) {
+            const previousRolls = player.rollsRemaining;
+            player.rollsRemaining = (player.rollsRemaining || 0) + 1;
+            console.log(`[RESET] Dead player ${player.username}: ${previousRolls} -> ${player.rollsRemaining} rolls`);
+        } else {
+            // Alive players get no rolls
+            player.rollsRemaining = 0;
+        }
     }
     gameState.nightActions = {
         gnosiaVotes: {},

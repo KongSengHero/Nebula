@@ -3,6 +3,7 @@
  * Keeps: mobile layout (improve1), desktop layout (main), all features from both.
  */
 import { useState, useEffect } from "react";
+import { animate } from "animejs";
 import { useSocket, useSocketEvent } from "../hooks/useSocket";
 import PlayerCard from "../components/PlayerCard.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
@@ -15,6 +16,68 @@ import { AVATAR_COLORS } from "../lib/profiles.js";
 const PHASE_COLORS = {
     DAY_DISCUSSION: "#00f5ff", VOTING: "#ffd700", AFTERNOON: "#ffb347",
     NIGHT: "#9b30ff", MORNING: "#ff9ef5", END: "#ff2a2a",
+};
+
+const AURA_ROLL_OPTIONS = [
+    "aura-rage-mode", 
+    "aura-golden-saiyan", 
+    "aura-glacier",
+    "aura-sunset",
+    "aura-glitch",
+    "aura-sparkle-white",
+    "aura-sparkle-yellow",
+    "aura-sparkle-pink"
+];
+
+const AURA_PREVIEW = {
+    "aura-rage-mode": {
+        border: "#f5f5f588",
+        shadow: "0 0 22px rgba(255, 255, 255, 0.16)",
+        color: "#f5f5f5",
+        label: "RAGE MODE",
+    },
+    "aura-golden-saiyan": {
+        border: "#ffd70088",
+        shadow: "0 0 28px rgba(255, 215, 0, 0.26)",
+        color: "#ffd700",
+        label: "GOLDEN SAIYAN",
+    },
+    "aura-glacier": {
+        border: "#8fe8ff88",
+        shadow: "0 0 28px rgba(113, 220, 255, 0.22)",
+        color: "#8fe8ff",
+        label: "GLACIER",
+    },
+    "aura-sunset": {
+        border: "#ff450088",
+        shadow: "0 0 28px rgba(255, 69, 0, 0.3)",
+        color: "#ff8c00",
+        label: "SUNSET",
+    },
+    "aura-glitch": {
+        border: "#00ff0088",
+        shadow: "0 0 22px rgba(0, 255, 0, 0.22)",
+        color: "#00ff00",
+        label: "GLITCH",
+    },
+    "aura-sparkle-white": {
+        border: "#ffffff88",
+        shadow: "0 0 22px rgba(255, 255, 255, 0.22)",
+        color: "#ffffff",
+        label: "WHITE SPARKLE",
+    },
+    "aura-sparkle-yellow": {
+        border: "#fff62d88",
+        shadow: "0 0 22px rgba(255, 246, 45, 0.22)",
+        color: "#fff62d",
+        label: "YELLOW SPARKLE",
+    },
+    "aura-sparkle-pink": {
+        border: "#ff69b488",
+        shadow: "0 0 22px rgba(255, 105, 180, 0.22)",
+        color: "#ff69b4",
+        label: "PINK SPARKLE",
+    },
 };
 const ROLE_COLORS = {
     gnosia: "#9b30ff", engineer: "#00f5ff", doctor: "#b0ffb8",
@@ -270,6 +333,10 @@ export default function Game({ session, socket, onLeaveRoom }) {
     const [lostConnectionNotice, setLostConnectionNotice] = useState("");
     const [unread,               setUnread]               = useState({ public: 0, gnosia: 0 });
 
+    // Roll Aura state
+    const [isRolling,   setRolling]   = useState(false);
+    const [rollingAura, setRollingAura] = useState("aura-rage-mode");
+
     // Layout state
     const [isMobile,       setIsMobile]       = useState(false);
     const [desktopChat,    setDesktopChat]    = useState(true);  // desktop sidebar toggle
@@ -434,6 +501,10 @@ export default function Game({ session, socket, onLeaveRoom }) {
         setTimeout(() => setLostConnectionNotice(""), 7000);
     });
 
+    useSocketEvent("player:auraUpdated", ({ playerId, aura, rollsRemaining }) => {
+        setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, aura, rollsRemaining } : p));
+    });
+
     // ── Actions ───────────────────────────────────────────────────────
     function submitVote() {
         if (!selectedTarget) return;
@@ -481,6 +552,45 @@ export default function Game({ session, socket, onLeaveRoom }) {
     function playAgain() {
         if (!me?.isHost) return;
         socket.emit("room:playAgain", { roomId }, res => { if (!res.success) alert(res.error || "Failed."); });
+    }
+
+    function handleRoll() {
+        if (isRolling || (me?.rollsRemaining ?? 0) <= 0) return;
+        setRolling(true);
+
+        let interval = setInterval(() => {
+            setRollingAura(AURA_ROLL_OPTIONS[Math.floor(Math.random() * AURA_ROLL_OPTIONS.length)]);
+        }, 80);
+
+        // Safety timeout — don't shuffle forever if something fails
+        const safety = setTimeout(() => {
+            clearInterval(interval);
+            setRolling(false);
+            console.error("Roll Aura: Socket timeout or server error.");
+        }, 8000);
+
+        socket.emit("player:rollAura", { roomId }, res => {
+            clearTimeout(safety);
+            setTimeout(() => {
+                clearInterval(interval);
+                if (res?.success) {
+                    setRollingAura(res.aura);
+                    // Premium Landing Burst (v4 syntax)
+                    animate(`#player-card-${myId}`, {
+                        scale: [1, 1.15, 1],
+                        rotate: [0, 5, -5, 0],
+                        duration: 800,
+                        ease: "outElastic(1, .5)",
+                    });
+                    
+                    // Server broadcasts player:auraUpdated so it updates locally via that listener too.
+                    setTimeout(() => setRolling(false), 2000);
+                } else {
+                    setRolling(false);
+                    if (res?.error) alert(res.error);
+                }
+            }, 1000);
+        });
     }
 
     // ── Guards ────────────────────────────────────────────────────────
@@ -703,6 +813,43 @@ export default function Game({ session, socket, onLeaveRoom }) {
                     </div>
                 </div>
             )}
+
+            {/* Roll Aura Modal Overlay */}
+            {isRolling && (
+                <div style={{
+                    position: "fixed", inset: 0, zIndex: 99999,
+                    background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    animation: "fadeIn 0.3s ease"
+                }}>
+                    <div style={{
+                        width: "min(320px, 90vw)", border: "2px solid #ffd70066",
+                        background: "#0d0020", padding: 24, textAlign: "center",
+                        boxShadow: "0 0 60px #000"
+                    }}>
+                        <div style={{ fontSize: 9, color: "#8a7aa0", letterSpacing: "0.2em", marginBottom: 20 }}>
+                            ROLLING AURA...
+                        </div>
+                        <div style={{
+                            width: 120, height: 120, margin: "20px auto",
+                            borderRadius: "50%", background: "#07000f",
+                            position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
+                            border: `2px solid ${AURA_PREVIEW[rollingAura]?.border || "#f5f5f588"}`,
+                            boxShadow: AURA_PREVIEW[rollingAura]?.shadow || "0 0 22px rgba(255, 255, 255, 0.16)"
+                        }}>
+                             <img src={`/profiles/${me.profileId}.jpg`} alt="Me"
+                                style={{ width: "90%", height: "90%", borderRadius: "50%", objectFit: "cover", opacity: 0.8 }} />
+                        </div>
+                        <div style={{
+                            fontSize: 8,
+                            letterSpacing: "0.16em",
+                            color: AURA_PREVIEW[rollingAura]?.color || "#f5f5f5",
+                        }}>
+                            {AURA_PREVIEW[rollingAura]?.label || "RAGE MODE"}
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 
@@ -751,6 +898,23 @@ export default function Game({ session, socket, onLeaveRoom }) {
                     }}>
                     {myRole?.toUpperCase()} ?
                 </div>
+
+                {/* Dead player: Roll Aura button */}
+                {me && !me.alive && (
+                    <button
+                        onClick={handleRoll}
+                        disabled={isRolling || (me?.rollsRemaining ?? 0) <= 0}
+                        style={{
+                            fontSize: isMobile ? 8 : 9, border: "1px solid #ffd70055",
+                            background: (isRolling || (me?.rollsRemaining ?? 0) <= 0) ? "#1a1a2a" : "#0d0020",
+                            color: (isRolling || (me?.rollsRemaining ?? 0) <= 0) ? "#4a3060" : "#ffd700",
+                            padding: isMobile ? "8px 12px" : "10px 16px",
+                            cursor: (isRolling || (me?.rollsRemaining ?? 0) <= 0) ? "default" : "pointer",
+                            fontFamily: "Press Start 2P"
+                        }}>
+                        🎲 ROLL AURA ({me?.rollsRemaining ?? 0})
+                    </button>
+                )}
 
                 {/* Desktop: chat toggle */}
                 {!isMobile && (

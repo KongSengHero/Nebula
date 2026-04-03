@@ -1,7 +1,113 @@
-/**
- * PlayerCard.jsx — Redesigned with profile images, larger, responsive.
- */
 import { AVATAR_COLORS } from "../lib/profiles.js";
+
+const buildAuraColumns = (specs, delayStep) =>
+    specs.map(([left, bottom, width, height, rotate, thrust, layer], index) => ({
+        left,
+        bottom,
+        width,
+        height,
+        rotate,
+        thrust,
+        layer,
+        delay: index * delayStep,
+    }));
+
+const RAGE_COLUMNS = buildAuraColumns([
+    [50, 54, 22, 58, 0, 21, 8],
+    [40, 49, 18, 48, -8, 17, 7],
+    [60, 49, 18, 48, 8, 17, 7],
+    [45, 51, 16, 53, -4, 18, 8],
+    [55, 51, 16, 53, 4, 18, 8],
+    [30, 40, 14, 41, -14, 14, 6],
+    [70, 40, 14, 41, 14, 14, 6],
+    [35, 42, 14, 43, -10, 15, 6],
+    [65, 42, 14, 43, 10, 15, 6],
+    [19, 30, 12, 34, -22, 10, 5],
+    [81, 30, 12, 34, 22, 10, 5],
+    [24, 32, 12, 36, -18, 11, 5],
+    [76, 32, 12, 36, 18, 11, 5],
+    [11, 19, 11, 26, -32, 8, 4],
+    [89, 19, 11, 26, 32, 8, 4],
+    [35, 17, 10, 21, -12, 5.5, 3],
+    [65, 17, 10, 21, 12, 5.5, 3],
+], 0.045);
+
+const GOLDEN_COLUMNS = buildAuraColumns([
+    [50, 54, 22, 58, 0, 21, 8],
+    [40, 49, 18, 48, -8, 17, 7],
+    [60, 49, 18, 48, 8, 17, 7],
+    [45, 51, 16, 53, -4, 18, 8],
+    [55, 51, 16, 53, 4, 18, 8],
+    [30, 40, 14, 41, -14, 14, 6],
+    [70, 40, 14, 41, 14, 14, 6],
+    [35, 42, 14, 43, -10, 15, 6],
+    [65, 42, 14, 43, 10, 15, 6],
+    [19, 30, 12, 34, -22, 10, 5],
+    [81, 30, 12, 34, 22, 10, 5],
+    [24, 32, 12, 36, -18, 11, 5],
+    [76, 32, 12, 36, 18, 11, 5],
+    [11, 19, 11, 26, -32, 8, 4],
+    [89, 19, 11, 26, 32, 8, 4],
+    [35, 17, 10, 21, -12, 5.5, 3],
+    [65, 17, 10, 21, 12, 5.5, 3],
+], 0.045);
+
+const GLACIER_COLUMNS = buildAuraColumns([
+    [50, 50, 18, 78, 0, 10, 7],
+    [39, 43, 15, 62, -8, 8, 6],
+    [61, 43, 15, 62, 8, 8, 6],
+    [27, 34, 14, 54, -16, 7, 5],
+    [73, 34, 14, 54, 16, 7, 5],
+    [16, 24, 12, 42, -26, 6, 4],
+    [84, 24, 12, 42, 26, 6, 4],
+    [9, 14, 10, 30, -34, 5, 3],
+    [91, 14, 10, 30, 34, 5, 3],
+], 0.065);
+
+const SPARKLE_COLUMNS = buildAuraColumns([
+    [20, 60, 4, 4, 0, 8, 5],
+    [80, 55, 5, 5, 0, 12, 5],
+    [15, 35, 4, 4, 0, 10, 5],
+    [85, 25, 6, 6, 0, 14, 5],
+    [50, 70, 4, 4, 0, 10, 5],
+    [30, 10, 5, 5, 0, 12, 5],
+    [70, 8, 4, 4, 0, 8, 5],
+], 0.25);
+
+const AURA_CONFIG = {
+    "aura-rage-mode": {
+        label: "Rage Mode",
+        columns: RAGE_COLUMNS,
+    },
+    "aura-golden-saiyan": {
+        label: "Golden Saiyan",
+        columns: GOLDEN_COLUMNS,
+    },
+    "aura-glacier": {
+        label: "Glacier",
+        columns: GLACIER_COLUMNS,
+    },
+    "aura-sunset": {
+        label: "Sunset",
+        columns: [],
+    },
+    "aura-glitch": {
+        label: "Glitch",
+        columns: [],
+    },
+    "aura-sparkle-white": {
+        label: "White Sparkles",
+        columns: SPARKLE_COLUMNS,
+    },
+    "aura-sparkle-yellow": {
+        label: "Yellow Sparkles",
+        columns: SPARKLE_COLUMNS,
+    },
+    "aura-sparkle-pink": {
+        label: "Pink Sparkles",
+        columns: SPARKLE_COLUMNS,
+    },
+};
 
 export default function PlayerCard({
     player, isMe, isSelected, canSelect, onSelect,
@@ -11,48 +117,119 @@ export default function PlayerCard({
     const color = AVATAR_COLORS[player.profileId] || "#c8b8ff";
     const isAlly = gnosiaAllies.includes(player.id);
     const isDead = !player.alive;
+    const aura = AURA_CONFIG[player.aura] || null;
+    const hasAura = Boolean(aura);
+    const avatarSize = compact ? 48 : 76;
+    const auraScale = compact ? 0.78 : 1;
+    const showPortrait = !isDead || hasAura;
 
-    // Get voters for this player
     const voters = Object.entries(voteBreakdown || {})
-        .filter(([_, targetId]) => targetId === player.id)
+        .filter(([, targetId]) => targetId === player.id)
         .map(([voterId]) => allPlayers.find(p => p.id === voterId))
         .filter(Boolean);
 
     const isGnosiaTarget = phase === "NIGHT" && myRole === "gnosia" && isSelected;
-    let borderColor = isDead ? "#1a0a2a" : isGnosiaTarget ? "#9b30ff" : isSelected ? "#00f5ff" : isAlly ? "#9b30ff" : color + "44";
+    let borderColor = isDead ? "#1a0a2a" : isGnosiaTarget ? "#9b30ff" : isSelected ? "#00f5ff" : isAlly ? "#9b30ff" : `${color}44`;
     let bgColor = isDead ? "#07000f" : isGnosiaTarget ? "#9b30ff0d" : isSelected ? "#00f5ff0d" : isAlly ? "#13002533" : "#0d0020";
     let shadow = isGnosiaTarget ? "0 0 24px #9b30ff66, 0 0 48px #9b30ff22"
         : isSelected ? "0 0 20px #00f5ff66, 0 0 40px #00f5ff22"
-        : isAlly ? "0 0 12px #9b30ff44"
-            : canSelect && !isDead ? `0 0 10px ${color}22`
-                : "none";
+            : isAlly ? "0 0 12px #9b30ff44"
+                : canSelect && !isDead ? `0 0 10px ${color}22`
+                    : "none";
+
+    if (player.aura === "aura-rage-mode") {
+        borderColor = "transparent";
+        bgColor = "#09090c";
+        shadow = "0 14px 34px rgba(0, 0, 0, 0.6), 0 0 16px rgba(255, 255, 255, 0.08)";
+    } else if (player.aura === "aura-golden-saiyan") {
+        borderColor = "transparent";
+        bgColor = "#171003";
+        shadow = "0 14px 34px rgba(0, 0, 0, 0.56), 0 0 24px rgba(255, 215, 0, 0.14)";
+    } else if (player.aura === "aura-glacier") {
+        borderColor = "transparent";
+        bgColor = "#071320";
+        shadow = "0 14px 34px rgba(0, 0, 0, 0.56), 0 0 22px rgba(119, 222, 255, 0.16)";
+    } else if (player.aura === "aura-sunset") {
+        borderColor = "transparent";
+        bgColor = "#1a0800";
+        shadow = "0 0 20px rgba(255, 69, 0, 0.22)";
+    } else if (player.aura === "aura-glitch") {
+        borderColor = "transparent";
+        bgColor = "#020202";
+        shadow = "0 0 16px rgba(0, 255, 0, 0.12)";
+    }
+
+    const avatarBorderColor = player.aura === "aura-rage-mode"
+        ? "rgba(255, 255, 255, 0.82)"
+        : player.aura === "aura-golden-saiyan"
+            ? "rgba(255, 216, 94, 0.88)"
+            : player.aura === "aura-glacier"
+                ? "rgba(168, 242, 255, 0.88)"
+                : isDead
+                    ? "#1a0a2a"
+                    : `${color}bb`;
+
+    const avatarBackground = player.aura === "aura-rage-mode"
+        ? "rgba(255, 255, 255, 0.03)"
+        : player.aura === "aura-golden-saiyan"
+            ? "rgba(255, 215, 0, 0.1)"
+            : player.aura === "aura-glacier"
+                ? "rgba(136, 218, 255, 0.08)"
+                : `${color}15`;
+
+    const avatarShadow = player.aura === "aura-rage-mode"
+        ? "0 0 18px rgba(255, 255, 255, 0.12)"
+        : player.aura === "aura-golden-saiyan"
+            ? "0 0 22px rgba(255, 215, 0, 0.26)"
+            : player.aura === "aura-glacier"
+                ? "0 0 22px rgba(124, 228, 255, 0.22)"
+                : isDead
+                    ? "0 0 20px rgba(255, 0, 0, 0.3), inset 0 0 15px rgba(255, 0, 0, 0.2)"
+                    : `0 4px 14px ${color}44`;
+
+    const cardClassName = ["player-card-frame", hasAura ? `has-aura ${player.aura}` : ""]
+        .filter(Boolean)
+        .join(" ");
+
+    const avatarClassName = ["avatar-shell", hasAura ? `avatar-aura ${player.aura}` : ""]
+        .filter(Boolean)
+        .join(" ");
 
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: "100%" }}>
             <button
+                id={`player-card-${player.id}`}
                 onClick={() => canSelect && !isDead && onSelect(player.id)}
                 disabled={!canSelect || isDead}
+                className={cardClassName}
                 style={{
-                    display: "flex", flexDirection: "column", alignItems: "center",
-                    gap: compact ? 6 : 12, padding: compact ? "8px 6px" : "16px 12px",
+                    padding: compact ? "8px 6px" : "16px 12px",
                     border: `1px solid ${borderColor}`,
-                    background: isDead ? "#07000f" : `linear-gradient(135deg, ${bgColor}ee, ${bgColor}aa)`,
+                    background: isDead
+                        ? `linear-gradient(180deg, ${bgColor}, #05050a)`
+                        : `linear-gradient(135deg, ${bgColor}ee, ${bgColor}aa)`,
                     backdropFilter: "blur(12px)",
                     borderRadius: 16,
-                    boxShadow: shadow !== "none" ? shadow : `0 8px 32px 0 rgba(0, 0, 0, 0.4)`,
+                    boxShadow: shadow !== "none" ? shadow : "0 8px 32px 0 rgba(0, 0, 0, 0.4)",
                     cursor: !canSelect || isDead ? "default" : "pointer",
-                    opacity: isDead ? 0.4 : 1,
+                    opacity: isDead ? (hasAura ? 0.94 : 0.7) : 1,
                     transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
                     position: "relative",
                     fontFamily: "Press Start 2P",
                     width: "100%",
                     transform: isSelected ? "translateY(-4px)" : "translateY(0)",
+                    isolation: "isolate",
                 }}>
 
-                {/* Top Center Badges */}
                 <div style={{
-                    position: "absolute", top: compact ? -8 : -10, left: "50%", transform: "translateX(-50%)", display: "flex",
-                    flexDirection: "row", gap: 4, alignItems: "center",
+                    position: "absolute",
+                    top: compact ? -8 : -10,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    display: "flex",
+                    flexDirection: "row",
+                    gap: 4,
+                    alignItems: "center",
                     zIndex: 10,
                 }}>
                     {player.isHost && <span className="badge" style={{ color: "#ffd700", fontSize: compact ? 5 : 6 }}>HOST</span>}
@@ -60,129 +237,259 @@ export default function PlayerCard({
                     {player.inColdSleep && <span className="badge" style={{ color: "#4a3060", fontSize: compact ? 5 : 6 }}>COLD</span>}
                 </div>
 
-                {/* Bottom YOU Badge */}
                 {isMe && (
                     <div style={{
-                        position: "absolute", bottom: compact ? -8 : -10, left: "50%", transform: "translateX(-50%)",
+                        position: "absolute",
+                        bottom: compact ? -8 : -10,
+                        left: "50%",
+                        transform: "translateX(-50%)",
                         zIndex: 10,
                     }}>
                         <span className="badge" style={{ color: "#00f5ff", fontSize: compact ? 5 : 6 }}>YOU</span>
                     </div>
                 )}
 
-                {/* Avatar */}
                 <div style={{
-                    width: compact ? 48 : 76, 
-                    height: compact ? 48 : 76,
-                    border: `2px solid ${isDead ? "#1a0a2a" : color + "bb"}`,
-                    background: color + "15",
-                    borderRadius: "50%",
-                    boxShadow: isDead ? "none" : `0 4px 14px ${color}44`,
-                    overflow: "hidden", position: "relative",
-                    flexShrink: 0,
-                    transition: "all 0.3s",
+                    position: "relative",
+                    zIndex: 1,
+                    width: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: compact ? 6 : 12,
                 }}>
-                    {isDead ? (
-                        <div style={{
-                            width: "100%", height: "100%", display: "flex",
-                            alignItems: "center", justifyContent: "center",
-                            fontSize: 28, color: "#2a1a3a"
-                        }}>✕</div>
-                    ) : (
-                        <>
-                            <img src={`/profiles/${player.profileId}.jpg`}
-                                alt={player.username}
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                onError={e => {
-                                    e.target.style.display = "none";
-                                    e.target.nextSibling.style.display = "flex";
-                                }} />
-                            <div style={{
-                                display: "none", position: "absolute", inset: 0,
-                                alignItems: "center", justifyContent: "center",
-                                color, fontSize: 26, fontWeight: "bold",
-                            }}>
-                                {player.username[0].toUpperCase()}
+                    <div
+                        className={avatarClassName}
+                        style={{
+                            width: avatarSize,
+                            height: avatarSize,
+                        }}>
+                        {hasAura && (
+                            <div
+                                className="avatar-aura-field"
+                                aria-hidden="true"
+                                style={{ transform: `scale(${auraScale})`, transformOrigin: "50% 68%" }}>
+                                <div className="avatar-aura-core" />
+                                {aura.columns.map((column, index) => (
+                                    <span
+                                        key={`${player.aura}-${index}`}
+                                        className="aura-column"
+                                        style={{
+                                            left: `${column.left}%`,
+                                            bottom: `${column.bottom}%`,
+                                            zIndex: column.layer,
+                                        }}>
+                                        <span
+                                            className="aura-blade"
+                                            style={{
+                                                "--blade-width": `${column.width}px`,
+                                                "--blade-height": `${column.height}px`,
+                                                "--blade-rotate": `${column.rotate}deg`,
+                                                "--blade-thrust": `${column.thrust}px`,
+                                                "--delay": `${column.delay}s`,
+                                            }}
+                                        />
+                                    </span>
+                                ))}
+                                {player.aura === "aura-glacier" && <div className="glacier-haze" />}
                             </div>
-                        </>
-                    )}
-                    {/* Selection ring */}
-                    {isSelected && (
-                        <div className={isGnosiaTarget ? "anim-pulseGnosia" : ""} style={{
-                            position: "absolute", inset: -3,
-                            border: `2px solid ${isGnosiaTarget ? "#9b30ff" : "#00f5ff"}`,
-                            borderRadius: "50%",
-                            animation: isGnosiaTarget ? undefined : "pulseGlow 1.5s ease-in-out infinite",
-                            pointerEvents: "none",
-                        }} />
-                    )}
-                </div>
+                        )}
 
-                {/* Name */}
-                <div style={{ textAlign: "center", width: "100%" }}>
-                    <div style={{
-                        fontSize: compact ? 7 : 9, color: isDead ? "#2a1a3a" : color,
-                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        marginBottom: 2,
-                    }}>
-                        {player.username}
+                        {player.aura === "aura-rage-mode" && (
+                            <>
+                                <div className="rage-face-mask" aria-hidden="true" />
+                                <div className="rage-eyes" aria-hidden="true">
+                                    <span className="rage-eye rage-eye--left">
+                                        <span className="rage-eye__pupil" />
+                                    </span>
+                                    <span className="rage-eye rage-eye--right">
+                                        <span className="rage-eye__pupil" />
+                                    </span>
+                                </div>
+                            </>
+                        )}
+
+                        {player.aura === "aura-glitch" && (
+                            <div className="aura-glitch-overlay" aria-hidden="true">
+                                <div className="aura-glitch-text">404</div>
+                                <div className="aura-glitch-crack" />
+                            </div>
+                        )}
+
+                        {player.aura === "aura-golden-saiyan" && (
+                            <div className="golden-crown" aria-hidden="true">
+                                <span className="golden-crown__base" />
+                                <span className="golden-crown__point golden-crown__point--left" />
+                                <span className="golden-crown__point golden-crown__point--center" />
+                                <span className="golden-crown__point golden-crown__point--right" />
+                                <span className="golden-crown__gem" />
+                            </div>
+                        )}
+
+                        <div style={{
+                            width: "100%",
+                            height: "100%",
+                            border: `2px solid ${avatarBorderColor}`,
+                            background: avatarBackground,
+                            borderRadius: "50%",
+                            boxShadow: avatarShadow,
+                            overflow: "hidden",
+                            position: "relative",
+                            flexShrink: 0,
+                            transition: "all 0.3s",
+                            zIndex: 2,
+                        }}>
+                            {showPortrait ? (
+                                <>
+                                    <img
+                                        src={`/profiles/${player.profileId}.jpg`}
+                                        alt={player.username}
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "cover",
+                                            filter: isDead ? "grayscale(0.92) brightness(0.72)" : "none",
+                                        }}
+                                        onError={e => {
+                                            e.target.style.display = "none";
+                                            e.target.nextSibling.style.display = "flex";
+                                        }}
+                                    />
+                                    <div style={{
+                                        display: "none",
+                                        position: "absolute",
+                                        inset: 0,
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        color,
+                                        fontSize: compact ? 18 : 26,
+                                        fontWeight: "bold",
+                                        background: isDead ? "rgba(0, 0, 0, 0.32)" : "transparent",
+                                    }}>
+                                        {player.username[0].toUpperCase()}
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 28,
+                                    color: "#2a1a3a",
+                                    position: "relative",
+                                    zIndex: 2,
+                                }}>X</div>
+                            )}
+
+                            {isDead && showPortrait && (
+                                <>
+                                    <div className="avatar-dead-veil" />
+                                    <div className="avatar-dead-mark">X</div>
+                                </>
+                            )}
+
+                            {isSelected && (
+                                <div
+                                    className={isGnosiaTarget ? "anim-pulseGnosia" : ""}
+                                    style={{
+                                        position: "absolute",
+                                        inset: -3,
+                                        border: `2px solid ${isGnosiaTarget ? "#9b30ff" : "#00f5ff"}`,
+                                        borderRadius: "50%",
+                                        animation: isGnosiaTarget ? undefined : "pulseGlow 1.5s ease-in-out infinite",
+                                        pointerEvents: "none",
+                                    }}
+                                />
+                            )}
+                        </div>
                     </div>
-                    {!compact && (
-                        <div style={{ fontSize: 7, color: "#4a3060" }}>
-                            {player.profileName || ""}
+
+                    <div style={{ textAlign: "center", width: "100%" }}>
+                        <div style={{
+                            fontSize: compact ? 7 : 9,
+                            color: isDead && !hasAura ? "#2a1a3a" : color,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            marginBottom: 2,
+                        }}>
+                            {player.username}
+                        </div>
+                        {!compact && (
+                            <div style={{ fontSize: 7, color: "#4a3060" }}>
+                                {player.profileName || aura?.label || ""}
+                            </div>
+                        )}
+                    </div>
+
+                    {canSelect && !isDead && !isMe && (
+                        <div style={{
+                            width: "100%",
+                            padding: compact ? "4px 0" : "8px 0",
+                            textAlign: "center",
+                            fontSize: compact ? 6 : 8,
+                            letterSpacing: "0.1em",
+                            border: `1px solid ${isSelected ? "#00f5ff" : `${color}44`}`,
+                            borderRadius: 6,
+                            color: isSelected ? "#07000f" : color,
+                            background: isSelected ? "#00f5ff" : "rgba(0,0,0,0.4)",
+                            marginTop: 2,
+                            transition: "all 0.2s",
+                            fontWeight: isSelected ? "bold" : "normal",
+                            textShadow: isSelected ? "none" : `0 0 10px ${color}88`,
+                        }}>
+                            {isSelected ? (isGnosiaTarget ? "TARGETED" : "SELECTED") :
+                                phase === "VOTING" ? "VOTE" : "SELECT"}
                         </div>
                     )}
                 </div>
-
-                {/* Select CTA */}
-                {canSelect && !isDead && !isMe && (
-                    <div style={{
-                        width: "100%", padding: compact ? "4px 0" : "8px 0", textAlign: "center",
-                        fontSize: compact ? 6 : 8, letterSpacing: "0.1em",
-                        border: `1px solid ${isSelected ? "#00f5ff" : color + "44"}`,
-                        borderRadius: 6,
-                        color: isSelected ? "#07000f" : color,
-                        background: isSelected ? "#00f5ff" : "rgba(0,0,0,0.4)",
-                        marginTop: 2,
-                        transition: "all 0.2s",
-                        fontWeight: isSelected ? "bold" : "normal",
-                        textShadow: isSelected ? "none" : `0 0 10px ${color}88`,
-                    }}>
-                        {isSelected ? (isGnosiaTarget ? "TARGETED" : "✓ SELECTED") :
-                            phase === "VOTING" ? "VOTE" : "SELECT"}
-                    </div>
-                )}
             </button>
 
-            {/* Vote indicators */}
             {voters.length > 0 && (
                 <div style={{
-                    display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap",
-                    width: "100%", paddingTop: 4,
+                    display: "flex",
+                    gap: 4,
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                    width: "100%",
+                    paddingTop: 4,
                 }}>
                     {voters.map(voter => {
                         const voterColor = AVATAR_COLORS[voter.profileId] || "#c8b8ff";
                         return (
-                            <div key={voter.id} style={{
-                                width: 26, height: 26,
-                                border: `1px solid ${voterColor}88`,
-                                background: voterColor + "15",
-                                borderRadius: "50%",
-                                overflow: "hidden",
-                                position: "relative",
-                                flexShrink: 0,
-                            }} title={voter.username}>
-                                <img src={`/profiles/${voter.profileId}.jpg`}
+                            <div
+                                key={voter.id}
+                                style={{
+                                    width: 26,
+                                    height: 26,
+                                    border: `1px solid ${voterColor}88`,
+                                    background: `${voterColor}15`,
+                                    borderRadius: "50%",
+                                    overflow: "hidden",
+                                    position: "relative",
+                                    flexShrink: 0,
+                                }}
+                                title={voter.username}>
+                                <img
+                                    src={`/profiles/${voter.profileId}.jpg`}
                                     alt={voter.username}
                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                     onError={e => {
                                         e.target.style.display = "none";
                                         e.target.nextSibling.style.display = "flex";
-                                    }} />
+                                    }}
+                                />
                                 <div style={{
-                                    display: "none", position: "absolute", inset: 0,
-                                    alignItems: "center", justifyContent: "center",
-                                    color: voterColor, fontSize: 12, fontWeight: "bold",
+                                    display: "none",
+                                    position: "absolute",
+                                    inset: 0,
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: voterColor,
+                                    fontSize: 12,
+                                    fontWeight: "bold",
                                 }}>
                                     {voter.username[0].toUpperCase()}
                                 </div>

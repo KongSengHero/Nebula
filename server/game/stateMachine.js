@@ -287,6 +287,8 @@ function resolveVote(gameState) {
     if (target) {
         target.alive = false;
         target.inColdSleep = true;
+        target.rollsRemaining = 2; // Give 2 rolls when voted out
+        console.log(`[DEATH] ${target.username} voted out, given 2 rolls`);
         gameState.morningReport.coldSleep = topId;
         console.log(`[FSM] ${target.username} voted into Cold Sleep (${topVotes} votes)`);
     }
@@ -420,6 +422,8 @@ function resetToLobby(gameState) {
         p.protected = false;
         p.scanned = false;
         p.dismissed = false;
+        p.aura = null;
+        p.rollsRemaining = 0;
     });
     resetNightFlags(gameState);
     
@@ -485,6 +489,8 @@ function buildPhasePayload(gameState) {
             inColdSleep: p.inColdSleep,
             isHost: p.isHost,
             disconnected: !!p.disconnected,
+            aura: p.aura,
+            rollsRemaining: p.rollsRemaining,
         })),
     };
 }
