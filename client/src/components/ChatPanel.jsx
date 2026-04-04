@@ -1,14 +1,17 @@
 /**
  * ChatPanel.jsx — Dual-tab chat. Fully redesigned with working send logic.
+ * Refactored to be a controlled component that receives messages and active tab 
+ * via props for precise synchronization and unread ping management.
  */
 import { useState, useEffect, useRef } from "react";
-import { useSocketEvent } from "../hooks/useSocket";
 import { AVATAR_COLORS } from "../lib/profiles.js";
+import { BsArrowsFullscreen } from "react-icons/bs";
+import { RiGlobalLine } from "react-icons/ri";
 
 const PUBLIC_OPEN_PHASES = ["LOBBY", "DAY_DISCUSSION", "AFTERNOON", "MORNING"];
-const GNOSIA_OPEN_PHASES = ["DAY_DISCUSSION", "NIGHT"];
+const GNOSIA_OPEN_PHASES = ["LOBBY", "DAY_DISCUSSION", "AFTERNOON", "NIGHT", "MORNING"];
 
-function MsgBubble({ msg, isMe }) {
+function MsgBubble({ msg, isMe, socketId }) {
     if (msg.type === "system") {
         return (
             <div style={{ display: "flex", justifyContent: "center", margin: "14px 0" }}>
@@ -27,11 +30,13 @@ function MsgBubble({ msg, isMe }) {
     const color = AVATAR_COLORS[msg.profileId] || "#c8b8ff";
     const isDead = msg.isAlive === false;
     const deadColor = "#ff6b6b";
-    
+
+    const finalIsMe = isMe || (msg.senderId === socketId);
+
     return (
         <div style={{
             display: "flex", flexDirection: "column",
-            alignItems: isMe ? "flex-end" : "flex-start",
+            alignItems: finalIsMe ? "flex-end" : "flex-start",
             gap: 5, marginBottom: 10,
             animation: "fadeInUp 0.2s ease forwards",
             opacity: isDead ? 0.85 : 1,
@@ -39,12 +44,12 @@ function MsgBubble({ msg, isMe }) {
             {/* Sender row */}
             <div style={{
                 display: "flex", alignItems: "center", gap: 8,
-                flexDirection: isMe ? "row-reverse" : "row"
+                flexDirection: finalIsMe ? "row-reverse" : "row"
             }}>
                 {/* Mini avatar */}
                 <div style={{
                     width: 28, height: 28, flexShrink: 0,
-                    border: isDead ? `1px solid ${deadColor}66` : `1px solid ${color}55`, 
+                    border: isDead ? `1px solid ${deadColor}66` : `1px solid ${color}55`,
                     background: isDead ? deadColor + "18" : color + "18",
                     overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center",
                     position: "relative",
@@ -54,10 +59,10 @@ function MsgBubble({ msg, isMe }) {
                         style={{ width: "100%", height: "100%", objectFit: "cover", opacity: isDead ? 0.6 : 1 }}
                         onError={e => {
                             e.target.style.display = "none";
-                            e.target.nextSibling.style.display = "block";
+                            if (e.target.nextSibling) e.target.nextSibling.style.display = "block";
                         }} />
                     <span style={{ display: "none", fontSize: 10, color: isDead ? deadColor : color, fontWeight: "bold" }}>
-                        {msg.senderName[0].toUpperCase()}
+                        {msg.senderName ? msg.senderName[0].toUpperCase() : "?"}
                     </span>
                     {isDead && (
                         <div style={{
@@ -77,10 +82,10 @@ function MsgBubble({ msg, isMe }) {
             {/* Bubble */}
             <div style={{
                 maxWidth: "75%", padding: "10px 14px",
-                background: isMe
+                background: finalIsMe
                     ? (msg.channel === "gnosia" ? "#9b30ff18" : "#00f5ff12")
                     : "#0d0020",
-                border: `1px solid ${isMe
+                border: `1px solid ${finalIsMe
                     ? (msg.channel === "gnosia" ? "#9b30ff44" : "#00f5ff33")
                     : "#1a0a2a"}`,
                 color: "#e0d4ff", fontSize: 10, lineHeight: 1.7,
@@ -92,13 +97,15 @@ function MsgBubble({ msg, isMe }) {
     );
 }
 
-export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPanelOpen = true, onUnreadChange }) {
+export default function ChatPanel({
+    roomId, myRole, isAlive, phase, socket, 
+    isPanelOpen = true,
+    pubMsgs = [], gnMsgs = [], 
+    unreadPub = 0, unreadGn = 0,
+    onViewTab, onExpand, 
+    tab = "public", onTabChange // Controlled tab state
+}) {
     const isGnosia = myRole === "gnosia";
-    const [tab, setTab] = useState("public");
-    const [pubMsgs, setPubMsgs] = useState([]);
-    const [gnMsgs, setGnMsgs] = useState([]);
-    const [unreadPub, setUnreadPub] = useState(0);
-    const [unreadGn, setUnreadGn] = useState(0);
     const [input, setInput] = useState("");
     const [error, setError] = useState("");
     const [sending, setSending] = useState(false);
@@ -113,64 +120,11 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [pubMsgs, gnMsgs, tab]);
 
-    // Auto-switch tab on phase change
-    useEffect(() => {
-        if (phase === "NIGHT" && isGnosia) setTab("gnosia");
-        if (phase === "AFTERNOON" && tab === "gnosia") setTab("public");
-    }, [phase]);
-
-    // Clear unread when viewing tab (and panel is open)
+    // Clear unread in parent when viewing tab
     useEffect(() => {
         if (!isPanelOpen) return;
-        if (tab === "public") setUnreadPub(0);
-        if (tab === "gnosia") setUnreadGn(0);
-    }, [tab, isPanelOpen]);
-
-    // Bubble unread counts up for badges (Game FAB, etc.)
-    useEffect(() => {
-        onUnreadChange?.({ public: unreadPub, gnosia: unreadGn });
-    }, [unreadPub, unreadGn, onUnreadChange]);
-
-    useSocketEvent("chat:message", msg => {
-        const formatted = {
-            ...msg,
-            isMe: false, // determined at render via socket.id
-            time: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        };
-        if (msg.channel === "gnosia") {
-            setGnMsgs(p => [...p, formatted]);
-            const shouldCount = !(isPanelOpen && tab === "gnosia");
-            if (shouldCount) setUnreadGn(n => n + 1);
-        } else {
-            // For public chat: filter based on alive/dead status
-            if (!isAlive && msg.isAlive === false) {
-                // Dead player receiving another dead player's message
-                setPubMsgs(p => [...p, formatted]);
-                const shouldCount = !(isPanelOpen && tab === "public");
-                if (shouldCount) setUnreadPub(n => n + 1);
-            } else if (isAlive) {
-                // Alive player receives all public messages (from alive players)
-                setPubMsgs(p => [...p, formatted]);
-                const shouldCount = !(isPanelOpen && tab === "public");
-                if (shouldCount) setUnreadPub(n => n + 1);
-            }
-            // Dead players don't see alive player messages in public chat
-        }
-    });
-
-    useSocketEvent("phase:changed", ({ phase: p }) => {
-        const label = {
-            DAY_DISCUSSION: "☀  Day Discussion begins.",
-            VOTING: "⚖  Voting phase — choose wisely.",
-            AFTERNOON: "🌅  Afternoon cooldown.",
-            NIGHT: "🌑  Night has fallen.",
-            MORNING: "🌄  Morning — results revealed.",
-        }[p];
-        if (!label) return;
-        const sys = { id: Date.now(), type: "system", text: label };
-        setPubMsgs(p => [...p, sys]);
-        if (isGnosia) setGnMsgs(p => [...p, sys]);
-    });
+        onViewTab?.(tab);
+    }, [tab, isPanelOpen, onViewTab]);
 
     function send() {
         const text = input.trim();
@@ -187,11 +141,11 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
     const tabColor = tab === "gnosia" ? "#9b30ff" : "#00f5ff";
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", minHeight: 0 }}>
 
             {/* Tab bar */}
             <div style={{ display: "flex", borderBottom: "1px solid #1a0a2a", flexShrink: 0 }}>
-                <button onClick={() => setTab("public")} style={{
+                <button onClick={() => onTabChange?.("public")} style={{
                     flex: 1, padding: "13px 0", fontSize: 9,
                     fontFamily: "Press Start 2P", cursor: "pointer",
                     background: tab === "public" ? "#00f5ff0d" : "transparent",
@@ -200,29 +154,32 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
                     borderBottom: `2px solid ${tab === "public" ? "#00f5ff" : "transparent"}`,
                     transition: "all 0.15s",
                 }}>
-                    🌐 CREW
-                    {unreadPub > 0 && tab !== "public" && (
-                        <span style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginLeft: 8,
-                            minWidth: 18,
-                            height: 18,
-                            padding: "0 6px",
-                            borderRadius: 999,
-                            background: "#ff2a2a",
-                            color: "#07000f",
-                            fontSize: 8,
-                            border: "1px solid #ff2a2a66",
-                        }}>
-                            {Math.min(99, unreadPub)}
-                        </span>
-                    )}
-                    {!pubOpen && <span style={{ fontSize: 7, color: "#2a1a3a", marginLeft: 6 }}>[CLOSED]</span>}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                        <RiGlobalLine style={{ fontSize: 13, marginBottom: 1 }} />
+                        <span>CREW</span>
+                        {unreadPub > 0 && tab !== "public" && (
+                            <span style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                marginLeft: 4,
+                                minWidth: 16,
+                                height: 16,
+                                padding: "0 4px",
+                                borderRadius: 999,
+                                background: "#ff2a2a",
+                                color: "#07000f",
+                                fontSize: 7,
+                                border: "1px solid #ff2a2a66",
+                            }}>
+                                {Math.min(99, unreadPub)}
+                            </span>
+                        )}
+                    </div>
+                    {!pubOpen && <span style={{ fontSize: 7, color: "#2a1a3a", marginTop: 4, display: "block" }}>[CLOSED]</span>}
                 </button>
                 {isGnosia && (
-                    <button onClick={() => setTab("gnosia")} style={{
+                    <button onClick={() => onTabChange?.("gnosia")} style={{
                         flex: 1, padding: "13px 0", fontSize: 9,
                         fontFamily: "Press Start 2P", cursor: "pointer",
                         background: tab === "gnosia" ? "#9b30ff0d" : "transparent",
@@ -231,47 +188,67 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
                         borderBottom: `2px solid ${tab === "gnosia" ? "#9b30ff" : "transparent"}`,
                         transition: "all 0.15s",
                     }}>
-                        👁 GNOSIA
-                        {unreadGn > 0 && tab !== "gnosia" && (
-                            <span style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                marginLeft: 8,
-                                minWidth: 18,
-                                height: 18,
-                                padding: "0 6px",
-                                borderRadius: 999,
-                                background: "#ff2a2a",
-                                color: "#07000f",
-                                fontSize: 8,
-                                border: "1px solid #ff2a2a66",
-                            }}>
-                                {Math.min(99, unreadGn)}
-                            </span>
-                        )}
-                        {!gnOpen && <span style={{ fontSize: 7, color: "#2a1a3a", marginLeft: 6 }}>[CLOSED]</span>}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                            <span>👁 GNOSIA</span>
+                            {unreadGn > 0 && tab !== "gnosia" && (
+                                <span style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    marginLeft: 4,
+                                    minWidth: 16,
+                                    height: 16,
+                                    padding: "0 4px",
+                                    borderRadius: 999,
+                                    background: "#ff2a2a",
+                                    color: "#07000f",
+                                    fontSize: 7,
+                                    border: "1px solid #ff2a2a66",
+                                }}>
+                                    {Math.min(99, unreadGn)}
+                                </span>
+                            )}
+                        </div>
+                        {!gnOpen && <span style={{ fontSize: 7, color: "#2a1a3a", marginTop: 4, display: "block" }}>[CLOSED]</span>}
                     </button>
                 )}
             </div>
 
             {/* Channel indicator */}
             <div style={{
-                padding: "8px 16px", flexShrink: 0, display: "flex", alignItems: "center", gap: 10,
+                padding: "10px 16px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between",
                 background: tab === "gnosia" ? "#13002533" : "#07000f44",
                 borderBottom: "1px solid #1a0a2a",
             }}>
-                <div style={{
-                    width: 8, height: 8, borderRadius: "50%",
-                    background: canSend ? tabColor : "#2a1a3a",
-                    boxShadow: canSend ? `0 0 6px ${tabColor}` : "none",
-                    flexShrink: 0,
-                }} />
-                <span style={{ fontSize: 8, color: "#4a3060" }}>
-                    {tab === "gnosia" ? "ENCRYPTED GNOSIA CHANNEL" : "PUBLIC CREW CHANNEL"}
-                    {!isAlive && " · SPECTATOR"}
-                    {isAlive && !canSend && " · INACTIVE"}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{
+                        width: 8, height: 8, borderRadius: "50%",
+                        background: canSend ? tabColor : "#2a1a3a",
+                        boxShadow: canSend ? `0 0 6px ${tabColor}` : "none",
+                        flexShrink: 0,
+                    }} />
+                    <span style={{ fontSize: 8, color: "#4a3060" }}>
+                        {tab === "gnosia" ? "ENCRYPTED GNOSIA CHANNEL" : "PUBLIC CREW CHANNEL"}
+                        {!isAlive && " · SPECTATOR"}
+                        {isAlive && !canSend && " · INACTIVE"}
+                    </span>
+                </div>
+                {onExpand && (
+                    <div 
+                        onClick={(e) => { e.stopPropagation(); onExpand(); }} 
+                        style={{ 
+                            color: "#00f5ff", 
+                            filter: "drop-shadow(0 0 6px #00f5ffaa)",
+                            display: "flex", alignItems: "center",
+                            padding: "4px", cursor: "pointer",
+                            transition: "all 0.2s"
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.filter = "drop-shadow(0 0 10px #00f5ff)"}
+                        onMouseLeave={e => e.currentTarget.style.filter = "drop-shadow(0 0 6px #00f5ffaa)"}
+                    >
+                        <BsArrowsFullscreen style={{ fontSize: 13 }} />
+                    </div>
+                )}
             </div>
 
             {/* Messages */}
@@ -289,7 +266,7 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
                     </div>
                 )}
                 {msgs.map(msg => (
-                    <MsgBubble key={msg.id} msg={msg} isMe={msg.senderId === socket.id} />
+                    <MsgBubble key={msg.id} msg={msg} isMe={msg.senderId === socket.id} socketId={socket.id} />
                 ))}
                 <div ref={bottomRef} />
             </div>
@@ -304,8 +281,8 @@ export default function ChatPanel({ roomId, myRole, isAlive, phase, socket, isPa
                 )}
                 {!canSend ? (
                     <div style={{ textAlign: "center", fontSize: 9, color: "#2a1a3a", padding: "8px 0" }}>
-                        {tab === "public" && phase === "NIGHT" ? "SILENCE DURING NIGHT" : 
-                         tab === "public" && phase === "VOTING" ? "VOTING PHASE CANNOT TALK" : "CHANNEL CLOSED"}
+                        {tab === "public" && phase === "NIGHT" ? "SILENCE DURING NIGHT" :
+                            tab === "public" && phase === "VOTING" ? "VOTING PHASE CANNOT TALK" : "CHANNEL CLOSED"}
                     </div>
                 ) : (
                     <div style={{ display: "flex", gap: 10 }}>

@@ -1,7 +1,3 @@
-/**
- * Game.jsx — Merge-conflict resolved. Mobile + Desktop unified.
- * Keeps: mobile layout (improve1), desktop layout (main), all features from both.
- */
 import { useState, useEffect } from "react";
 import { animate } from "animejs";
 import { useSocket, useSocketEvent } from "../hooks/useSocket";
@@ -12,6 +8,8 @@ import NightPanel from "../components/NightPanel.jsx";
 import StartReveal from "../components/StartReveal.jsx";
 import { clearPlaySession } from "../lib/sessionPersistence.js";
 import { AVATAR_COLORS } from "../lib/profiles.js";
+import { BsStars, BsArrowsFullscreen } from "react-icons/bs";
+import { RiGlobalLine } from "react-icons/ri";
 
 const PHASE_COLORS = {
     DAY_DISCUSSION: "#00f5ff", VOTING: "#ffd700", AFTERNOON: "#ffb347",
@@ -26,7 +24,8 @@ const AURA_ROLL_OPTIONS = [
     "aura-glitch",
     "aura-sparkle-white",
     "aura-sparkle-yellow",
-    "aura-sparkle-pink"
+    "aura-sparkle-pink",
+    "aura-judgement"
 ];
 
 const AURA_PREVIEW = {
@@ -78,6 +77,12 @@ const AURA_PREVIEW = {
         color: "#ff69b4",
         label: "PINK SPARKLE",
     },
+    "aura-judgement": {
+        border: "#00f5ff88",
+        shadow: "0 0 32px rgba(0, 245, 255, 0.3)",
+        color: "#00f5ff",
+        label: "JUDGEMENT",
+    },
 };
 const ROLE_COLORS = {
     gnosia: "#9b30ff", engineer: "#00f5ff", doctor: "#b0ffb8",
@@ -93,7 +98,6 @@ const ROLE_INFO = {
     traitor:  { icon: "◈", desc: "You have no special ability, but you appear human to all scans and inspections. You win with the Gnosia." },
 };
 
-// ── Big phase timer ──────────────────────────────────────────────────
 function PhaseTimer({ endsAt, color }) {
     const [rem, setRem] = useState(0);
     useEffect(() => {
@@ -103,23 +107,18 @@ function PhaseTimer({ endsAt, color }) {
         const id = setInterval(tick, 500);
         return () => clearInterval(id);
     }, [endsAt]);
-
     const secs = Math.ceil(rem / 1000);
     const mins = Math.floor(secs / 60);
     const s = secs % 60;
     const urgent = secs <= 30 && secs > 0;
-
     return (
         <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 7, color: "#8a7aa0", letterSpacing: "0.2em", marginBottom: 4 }}>
-                TIME REMAINING
-            </div>
+            <div style={{ fontSize: 7, color: "#8a7aa0", letterSpacing: "0.2em", marginBottom: 4 }}>TIME REMAINING</div>
             <div style={{
                 fontSize: 32, color: urgent ? "#ff2a2a" : color,
                 textShadow: urgent ? "0 0 16px #ff2a2a" : "0 0 16px " + color + "aa",
                 animation: urgent ? "urgentPulse 0.6s infinite" : "none",
-                fontVariantNumeric: "tabular-nums",
-                letterSpacing: "0.05em",
+                fontVariantNumeric: "tabular-nums", letterSpacing: "0.05em",
             }}>
                 {String(mins).padStart(2, "0")}:{String(s).padStart(2, "0")}
             </div>
@@ -127,7 +126,6 @@ function PhaseTimer({ endsAt, color }) {
     );
 }
 
-// ── Game Over screen ─────────────────────────────────────────────────
 function GameOverScreen({ result, onPlayAgain, amHost }) {
     const hw = result.winner === "humans";
     const wc = hw ? "#00f5ff" : "#9b30ff";
@@ -137,9 +135,7 @@ function GameOverScreen({ result, onPlayAgain, amHost }) {
             alignItems: "center", justifyContent: "center", gap: 28, padding: 32,
             zIndex: 60, overflowY: "auto", animation: "fadeIn 0.4s ease",
         }}>
-            <div style={{ fontSize: 80, filter: `drop-shadow(0 0 30px ${wc})` }}>
-                {hw ? "◈" : "👁"}
-            </div>
+            <div style={{ fontSize: 80, filter: `drop-shadow(0 0 30px ${wc})` }}>{hw ? "◈" : "👁"}</div>
             <div style={{ textAlign: "center" }}>
                 <h1 style={{ fontSize: 28, color: wc, textShadow: `0 0 20px ${wc}`, marginBottom: 12 }}>
                     {hw ? "HUMANS WIN" : "GNOSIA WIN"}
@@ -148,51 +144,26 @@ function GameOverScreen({ result, onPlayAgain, amHost }) {
                     {hw ? "All Gnosia eliminated. The crew survives." : "The Gnosia have taken control."}
                 </p>
             </div>
-            <div style={{
-                border: `1px solid ${wc}33`, padding: 24, maxWidth: 480, width: "100%",
-                background: "#0d002088",
-            }}>
+            <div style={{ border: `1px solid ${wc}33`, padding: 24, maxWidth: 480, width: "100%", background: "#0d002088" }}>
                 <div style={{ fontSize: 9, color: "#4a3060", marginBottom: 16 }}>FINAL MANIFEST</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                     {result.players.map(p => {
                         const rc = ROLE_COLORS[p.role] || "#c8b8ff";
                         const ac = AVATAR_COLORS[p.profileId] || "#c8b8ff";
                         return (
-                            <div key={p.id} style={{
-                                display: "flex", alignItems: "center", gap: 12,
-                                paddingBottom: 10, borderBottom: "1px solid #1a0a2a",
-                            }}>
-                                <div style={{
-                                    width: 40, height: 40, flexShrink: 0,
-                                    border: `2px solid ${ac}55`, background: ac + "15", overflow: "hidden",
-                                }}>
-                                    <img src={`/profiles/${p.profileId}.jpg`} alt={p.username}
-                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 10, borderBottom: "1px solid #1a0a2a" }}>
+                                <div style={{ width: 40, height: 40, flexShrink: 0, border: `2px solid ${ac}55`, background: ac + "15", overflow: "hidden" }}>
+                                    <img src={`/profiles/${p.profileId}.jpg`} alt={p.username} style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                         onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
-                                    <div style={{
-                                        display: "none", width: "100%", height: "100%", alignItems: "center",
-                                        justifyContent: "center", color: ac, fontSize: 16, fontWeight: "bold",
-                                    }}>
+                                    <div style={{ display: "none", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", color: ac, fontSize: 16, fontWeight: "bold" }}>
                                         {p.username[0].toUpperCase()}
                                     </div>
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                        fontSize: 10, color: "#e0d4ff",
-                                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                    }}>
-                                        {p.username}
-                                    </div>
-                                    <div style={{ fontSize: 8, color: p.alive ? "#4a3060" : "#2a1a3a", marginTop: 3 }}>
-                                        {p.alive ? "SURVIVED" : "ELIMINATED"}
-                                    </div>
+                                    <div style={{ fontSize: 10, color: "#e0d4ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.username}</div>
+                                    <div style={{ fontSize: 8, color: p.alive ? "#4a3060" : "#2a1a3a", marginTop: 3 }}>{p.alive ? "SURVIVED" : "ELIMINATED"}</div>
                                 </div>
-                                <span style={{
-                                    fontSize: 8, border: `1px solid ${rc}44`, color: rc,
-                                    padding: "4px 10px", flexShrink: 0,
-                                }}>
-                                    {p.role.toUpperCase()}
-                                </span>
+                                <span style={{ fontSize: 8, border: `1px solid ${rc}44`, color: rc, padding: "4px 10px", flexShrink: 0 }}>{p.role.toUpperCase()}</span>
                             </div>
                         );
                     })}
@@ -205,35 +176,19 @@ function GameOverScreen({ result, onPlayAgain, amHost }) {
     );
 }
 
-// ── Reconnecting screen ──────────────────────────────────────────────
 function ReconnectingScreen() {
     return (
-        <div className="crt star-bg" style={{
-            height: "100vh", display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", overflow: "hidden",
-        }}>
-            <div style={{
-                position: "fixed", inset: 0, pointerEvents: "none",
-                backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px)",
-            }} />
+        <div className="crt star-bg" style={{ height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            <div style={{ position: "fixed", inset: 0, pointerEvents: "none", backgroundImage: "repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px)" }} />
             <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: 32, zIndex: 10 }}>
                 <div style={{ fontSize: 72, animation: "pulse 1.5s ease-in-out infinite", filter: "drop-shadow(0 0 30px #00f5ff)" }}>◈</div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                    <h1 style={{ fontSize: 28, letterSpacing: "0.15em", color: "#00f5ff", textShadow: "0 0 20px #00f5ff88", margin: 0 }}>
-                        RECONNECTING...
-                    </h1>
-                    <p style={{ fontSize: 10, color: "#4a3060", textAlign: "center", lineHeight: 1.8, margin: 0 }}>
-                        Attempting to restore connection<br />to the game server.
-                    </p>
+                    <h1 style={{ fontSize: 28, letterSpacing: "0.15em", color: "#00f5ff", textShadow: "0 0 20px #00f5ff88", margin: 0 }}>RECONNECTING...</h1>
+                    <p style={{ fontSize: 10, color: "#4a3060", textAlign: "center", lineHeight: 1.8, margin: 0 }}>Attempting to restore connection<br />to the game server.</p>
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     {[0, 1, 2].map(i => (
-                        <div key={i} style={{
-                            width: 8, height: 8, borderRadius: "50%",
-                            background: "#00f5ff", boxShadow: "0 0 12px #00f5ff",
-                            animation: "bounce 1.2s ease-in-out infinite",
-                            animationDelay: `${i * 0.2}s`,
-                        }} />
+                        <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "#00f5ff", boxShadow: "0 0 12px #00f5ff", animation: "bounce 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />
                     ))}
                 </div>
             </div>
@@ -245,58 +200,39 @@ function ReconnectingScreen() {
     );
 }
 
-// ── Skip voters bar ──────────────────────────────────────────────────
 function SkipBar({ skipVotes, myId, onSkip, actionError, actionMsg }) {
     const iVoted = skipVotes.some(v => v.id === myId);
     return (
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             {actionError && <div style={{ fontSize: 8, color: "#ff2a2a", width: "100%" }}>⚠ {actionError}</div>}
             {actionMsg  && <div style={{ fontSize: 8, color: "#00f5ff", width: "100%" }}>{actionMsg}</div>}
-            <button className="btn btn-secondary" style={{ fontSize: 8, padding: "8px 12px", flexShrink: 0 }}
-                onClick={() => { if (!iVoted) onSkip(); }} disabled={iVoted}>
+            <button className="btn btn-secondary" style={{ fontSize: 8, padding: "8px 12px", flexShrink: 0 }} onClick={() => { if (!iVoted) onSkip(); }} disabled={iVoted}>
                 {iVoted ? "✓ SKIP REQUESTED" : "⏭ SKIP PHASE"}
             </button>
             <div style={{ display: "flex", alignItems: "center" }}>
                 {skipVotes.map((voter, i) => (
-                    <img key={voter.id}
-                        src={`/profiles/${voter.profileId}.jpg`}
-                        alt={voter.username} title={`${voter.username} wants to skip`}
-                        style={{
-                            width: 26, height: 26, borderRadius: "50%",
-                            border: "2px solid #07000f", objectFit: "cover",
-                            boxShadow: "0 0 8px #00f5ff44",
-                            marginLeft: i > 0 ? -8 : 0,
-                            zIndex: skipVotes.length - i, position: "relative",
-                            animation: "fadeInUp 0.3s ease forwards",
-                        }}
-                        onError={e => { e.target.style.display = "none"; }}
-                    />
+                    <img key={voter.id} src={`/profiles/${voter.profileId}.jpg`} alt={voter.username} title={`${voter.username} wants to skip`}
+                        style={{ width: 26, height: 26, borderRadius: "50%", border: "2px solid #07000f", objectFit: "cover", boxShadow: "0 0 8px #00f5ff44", marginLeft: i > 0 ? -8 : 0, zIndex: skipVotes.length - i, position: "relative", animation: "fadeInUp 0.3s ease forwards" }}
+                        onError={e => { e.target.style.display = "none"; }} />
                 ))}
             </div>
         </div>
     );
 }
 
-// ── Vote progress bar ─────────────────────────────────────────────────
 function VoteProgressBar({ votesCast, totalAlive }) {
     const pct = totalAlive > 0 ? (votesCast / totalAlive) * 100 : 0;
     return (
         <div style={{ padding: "10px 16px", flexShrink: 0, borderBottom: "1px solid #1a0a2a", display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 8, color: "#4a3060", flexShrink: 0 }}>VOTES</span>
             <div style={{ flex: 1, height: 4, background: "#1a0015", borderRadius: 2 }}>
-                <div style={{
-                    height: "100%", background: "#ffd700", boxShadow: "0 0 8px #ffd700",
-                    borderRadius: 2, transition: "width 0.5s", width: `${pct}%`,
-                }} />
+                <div style={{ height: "100%", background: "#ffd700", boxShadow: "0 0 8px #ffd700", borderRadius: 2, transition: "width 0.5s", width: `${pct}%` }} />
             </div>
             <span style={{ fontSize: 9, color: "#ffd700", flexShrink: 0 }}>{votesCast}/{totalAlive}</span>
         </div>
     );
 }
 
-// ─────────────────────────────────────────────
-// MAIN GAME
-// ─────────────────────────────────────────────
 export default function Game({ session, socket, onLeaveRoom }) {
     const { roomId, myId, myRole, allies: initialAllies = [], gnosiaCount } = session;
     const { reconnecting } = useSocket();
@@ -333,14 +269,69 @@ export default function Game({ session, socket, onLeaveRoom }) {
     const [lostConnectionNotice, setLostConnectionNotice] = useState("");
     const [unread,               setUnread]               = useState({ public: 0, gnosia: 0 });
 
-    // Roll Aura state
     const [isRolling,   setRolling]   = useState(false);
     const [rollingAura, setRollingAura] = useState("aura-rage-mode");
+    const [showAuraPicker, setShowAuraPicker] = useState(false);
 
-    // Layout state
     const [isMobile,       setIsMobile]       = useState(false);
-    const [desktopChat,    setDesktopChat]    = useState(true);  // desktop sidebar toggle
-    const [mobileChatOpen, setMobileChatOpen] = useState(false); // mobile modal toggle
+    const [desktopChat, setDesktopChat] = useState(false);
+    const [mobileChatOpen, setMobileChatOpen] = useState(false);
+
+    // Lifted Chat State
+    const [pubMsgs, setPubMsgs] = useState([]);
+    const [gnMsgs, setGnMsgs] = useState([]);
+    const [unreadPub, setUnreadPub] = useState(0);
+    const [unreadGn, setUnreadGn] = useState(0);
+    const [activeChatTab, setActiveChatTab] = useState("public");
+
+    // Sync total unread for TopBar badge (legacy/desktop)
+    useEffect(() => {
+        setUnread({ public: unreadPub, gnosia: unreadGn });
+    }, [unreadPub, unreadGn]);
+
+    useSocketEvent("chat:message", msg => {
+        const formatted = {
+            ...msg,
+            time: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
+        if (msg.channel === "gnosia") {
+            setGnMsgs(p => [...p, formatted]);
+            const isViewingGn = (desktopChat || mobileChatOpen) && activeChatTab === "gnosia";
+            if (!isViewingGn) setUnreadGn(n => n + 1);
+        } else {
+            setPubMsgs(p => [...p, formatted]);
+            const isViewingPub = (desktopChat || mobileChatOpen) && activeChatTab === "public";
+            if (!isViewingPub) setUnreadPub(n => n + 1);
+        }
+    });
+
+    // Auto-switch channel based on phase
+    useEffect(() => {
+        if (phase === "NIGHT" && myRole === "gnosia") {
+            setActiveChatTab("gnosia");
+        } else if (phase === "DAY_DISCUSSION") {
+            setActiveChatTab("public");
+        }
+    }, [phase, myRole]);
+
+    useSocketEvent("phase:changed", ({ phase: p }) => {
+        const label = {
+            DAY_DISCUSSION: "☀ Day Discussion begins.",
+            VOTING: "⚖ Voting phase — choose wisely.",
+            AFTERNOON: "🌅 Afternoon cooldown.",
+            NIGHT: "🌑 Night has fallen.",
+            MORNING: "🌄 Morning — results revealed.",
+        }[p];
+        if (!label) return;
+        const sys = { id: Date.now(), type: "system", text: label };
+        setPubMsgs(p => [...p, sys]);
+        if (myRole === "gnosia") setGnMsgs(p => [...p, sys]);
+    });
+
+    const handleClearUnread = (tab) => {
+        if (tab === "public") setUnreadPub(0);
+        else if (tab === "gnosia") setUnreadGn(0);
+    };
 
     const me         = players.find(p => p.id === myId);
     const isNight    = phase === "NIGHT";
@@ -349,7 +340,6 @@ export default function Game({ session, socket, onLeaveRoom }) {
     const roleColor  = ROLE_COLORS[myRole] || "#c8b8ff";
     const totalUnread = unread.public + unread.gnosia;
 
-    // ── Mobile detection ──────────────────────────────────────────────
     useEffect(() => {
         if (typeof window === "undefined" || !window.matchMedia) return;
         const m = window.matchMedia("(max-width: 768px)");
@@ -359,36 +349,26 @@ export default function Game({ session, socket, onLeaveRoom }) {
         return () => m.removeEventListener?.("change", apply) || m.removeListener?.(apply);
     }, []);
 
-    // Auto-close mobile chat when entering non-discussion phases
     useEffect(() => {
         if (!isMobile) return;
-        if (!["DAY_DISCUSSION", "LOBBY", "AFTERNOON"].includes(phase)) {
-            setMobileChatOpen(false);
-        }
+        if (!["DAY_DISCUSSION", "LOBBY", "AFTERNOON"].includes(phase)) setMobileChatOpen(false);
     }, [phase, isMobile]);
 
-    // Trigger start reveal on round 1 day discussion
     useEffect(() => {
         if (hasShownStartReveal) return;
         if (phase === "DAY_DISCUSSION" && round === 1 && players.length > 0) {
-            setShowStartReveal(true);
-            setHasShownStartReveal(true);
-            setShowOverlay(false);
+            setShowStartReveal(true); setHasShownStartReveal(true); setShowOverlay(false);
         }
     }, [phase, round, players.length, hasShownStartReveal]);
 
-    // ── Result modal helper ───────────────────────────────────────────
     function showResultModal(payload) {
         setResultModal(payload);
         const ms = typeof payload?.durationMs === "number" ? payload.durationMs : 6000;
         setTimeout(() => setResultModal(null), ms);
     }
 
-    // ── Socket listeners ──────────────────────────────────────────────
     useSocketEvent("game:roleAssigned", rolePayload => {
-        if (rolePayload.role === "gnosia" && rolePayload.gnosiaAllies) {
-            setAllies(rolePayload.gnosiaAllies);
-        }
+        if (rolePayload.role === "gnosia" && rolePayload.gnosiaAllies) setAllies(rolePayload.gnosiaAllies);
     });
 
     useSocketEvent("phase:changed", ({ phase: p, round: r, timers: t, players: pl, skipVotes: sv, morningReport: mr }) => {
@@ -399,11 +379,6 @@ export default function Game({ session, socket, onLeaveRoom }) {
         if (p !== "VOTE_REVEAL" && p !== "AFTERNOON") setVoteBreakdown(null);
         setSkipVotes(Array.isArray(sv) ? sv : []);
         setMorningReport(mr || null);
-        if (p === "DAY_DISCUSSION" && r === 1 && !hasShownStartReveal) {
-            setShowStartReveal(true);
-            setHasShownStartReveal(true);
-            setShowOverlay(false);
-        }
     });
 
     useSocketEvent("phase:skip:updated", voters => setSkipVotes(Array.isArray(voters) ? voters : []));
@@ -415,97 +390,42 @@ export default function Game({ session, socket, onLeaveRoom }) {
 
     useSocketEvent("vote:result", result => {
         setVoteBreakdown(result.votes || {});
-        setVoteReveal({
-            eliminatedId:       result.eliminated || null,
-            eliminatedUsername: result.eliminatedUsername || null,
-            reason:             result.reason || null,
-        });
+        setVoteReveal({ eliminatedId: result.eliminated || null, eliminatedUsername: result.eliminatedUsername || null, reason: result.reason || null });
         setTimeout(() => {
             setMorningReport(prev => ({ ...(prev || {}), coldSleep: result.eliminated, coldSleepUsername: result.eliminatedUsername }));
-            if (result.eliminated) {
-                setPlayers(prev => prev.map(p => p.id === result.eliminated ? { ...p, alive: false, inColdSleep: true } : p));
-            }
+            if (result.eliminated) setPlayers(prev => prev.map(p => p.id === result.eliminated ? { ...p, alive: false, inColdSleep: true } : p));
             setVoteReveal(null);
         }, 4200);
     });
 
     useSocketEvent("night:scanResult", r => {
         setScanResult(r);
-        showResultModal({
-            variant: r?.isGnosia ? "danger" : "info",
-            title:   "ENGINEER SCAN RESULT",
-            message: `${r?.targetUsername || "Target"} is ${r?.isGnosia ? "GNOSIA" : "HUMAN"}.`,
-            durationMs: 6000,
-        });
+        showResultModal({ variant: r?.isGnosia ? "danger" : "info", title: "ENGINEER SCAN RESULT", message: `${r?.targetUsername || "Target"} is ${r?.isGnosia ? "GNOSIA" : "HUMAN"}.` });
     });
 
     useSocketEvent("night:inspectResult", r => {
-        setInspectResult(r);
-        if (r?.error) return;
-        showResultModal({
-            variant: r?.role === "gnosia" ? "danger" : "success",
-            title:   "DOCTOR INSPECTION RESULT",
-            message: `${r?.targetUsername || "Target"} was ${r?.role === "gnosia" ? "GNOSIA" : "HUMAN"}.`,
-            durationMs: 6000,
-        });
+        setInspectResult(r); if (r?.error) return;
+        showResultModal({ variant: r?.role === "gnosia" ? "danger" : "success", title: "DOCTOR INSPECTION RESULT", message: `${r?.targetUsername || "Target"} was ${r?.role === "gnosia" ? "GNOSIA" : "HUMAN"}.` });
     });
 
     useSocketEvent("night:guardianResult", r => {
         setGuardianResult(r);
-        showResultModal({
-            variant: r?.worked ? "success" : "info",
-            title:   "PROTECTION OUTCOME",
-            message: r?.worked
-                ? `You protected ${r?.targetUsername || "Target"} from the Gnosia!`
-                : `Your ward ${r?.targetUsername || "Target"} was not targeted tonight.`,
-            durationMs: 6000,
-        });
+        showResultModal({ variant: r?.worked ? "success" : "info", title: "PROTECTION OUTCOME", message: r?.worked ? `You protected ${r?.targetUsername || "Target"} from the Gnosia!` : `Your ward ${r?.targetUsername || "Target"} was not targeted tonight.` });
     });
 
     useSocketEvent("night:scannedAlert", payload => {
-        setScannedAlert(true);
-        setTimeout(() => setScannedAlert(false), 8000);
-        showResultModal({
-            variant:    "danger",
-            title:      "GNOSIA ALERT",
-            message:    payload?.message || "You have been scanned by the Engineer.",
-            durationMs: 6000,
-        });
+        setScannedAlert(true); setTimeout(() => setScannedAlert(false), 8000);
+        showResultModal({ variant: "danger", title: "GNOSIA ALERT", message: payload?.message || "You have been scanned by the Engineer." });
     });
 
-    useSocketEvent("ui:toast", t => showResultModal({
-        variant:    t?.variant || "info",
-        title:      t?.title   || "NOTICE",
-        message:    t?.message || "",
-        durationMs: typeof t?.durationMs === "number" ? t.durationMs : 6000,
-    }));
-
-    useSocketEvent("night:gnosiaVoteProgress", ({ votesIn, totalGnosia }) => {
-        setGnosiaVP({ votesIn, totalGnosia });
-        setActionMsg(`${votesIn}/${totalGnosia} Gnosia voted`);
-    });
-
+    useSocketEvent("ui:toast", t => showResultModal({ variant: t?.variant || "info", title: t?.title || "NOTICE", message: t?.message || "", durationMs: t?.durationMs }));
+    useSocketEvent("night:gnosiaVoteProgress", ({ votesIn, totalGnosia }) => { setGnosiaVP({ votesIn, totalGnosia }); setActionMsg(`${votesIn}/${totalGnosia} Gnosia voted`); });
     useSocketEvent("game:over", r => { setGameOver(r); setPhase("END"); });
+    useSocketEvent("player:disconnected", ({ socketId }) => { setPlayers(prev => prev.map(p => p.id === socketId ? { ...p, disconnected: true } : p)); });
+    useSocketEvent("player:reconnected", ({ previousId, newId }) => { setPlayers(prev => prev.map(p => p.id === previousId ? { ...p, id: newId, disconnected: false } : p)); });
+    useSocketEvent("player:lostConnection", ({ username, playerId }) => { setLostConnectionNotice(`${username} lost connection.`); setPlayers(prev => prev.filter(p => p.id !== playerId)); setTimeout(() => setLostConnectionNotice(""), 7000); });
+    useSocketEvent("player:auraUpdated", ({ playerId, aura, rollsRemaining }) => { setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, aura, rollsRemaining } : p)); });
 
-    useSocketEvent("player:disconnected", ({ socketId }) => {
-        setPlayers(prev => prev.map(p => p.id === socketId ? { ...p, disconnected: true } : p));
-    });
-
-    useSocketEvent("player:reconnected", ({ previousId, newId }) => {
-        setPlayers(prev => prev.map(p => p.id === previousId ? { ...p, id: newId, disconnected: false } : p));
-    });
-
-    useSocketEvent("player:lostConnection", ({ username, playerId }) => {
-        setLostConnectionNotice(`${username} lost connection.`);
-        setPlayers(prev => prev.filter(p => p.id !== playerId));
-        setTimeout(() => setLostConnectionNotice(""), 7000);
-    });
-
-    useSocketEvent("player:auraUpdated", ({ playerId, aura, rollsRemaining }) => {
-        setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, aura, rollsRemaining } : p));
-    });
-
-    // ── Actions ───────────────────────────────────────────────────────
     function submitVote() {
         if (!selectedTarget) return;
         socket.emit("vote:submit", { roomId, targetId: selectedTarget }, res => {
@@ -543,447 +463,183 @@ export default function Game({ session, socket, onLeaveRoom }) {
 
     function leaveRoom() {
         if (!window.confirm("Leave the room?")) return;
-        socket.emit("room:leave", { roomId }, res => {
-            if (res.success) { clearPlaySession(); onLeaveRoom?.(); }
-            else alert(res.error || "Failed to leave.");
-        });
+        socket.emit("room:leave", { roomId }, res => { if (res.success) { clearPlaySession(); onLeaveRoom?.(); } else alert(res.error || "Failed to leave."); });
     }
 
-    function playAgain() {
-        if (!me?.isHost) return;
-        socket.emit("room:playAgain", { roomId }, res => { if (!res.success) alert(res.error || "Failed."); });
-    }
+    function playAgain() { if (me?.isHost) socket.emit("room:playAgain", { roomId }, res => { if (!res.success) alert(res.error || "Failed."); }); }
 
     function handleRoll() {
         if (isRolling || (me?.rollsRemaining ?? 0) <= 0) return;
         setRolling(true);
-
-        let interval = setInterval(() => {
-            setRollingAura(AURA_ROLL_OPTIONS[Math.floor(Math.random() * AURA_ROLL_OPTIONS.length)]);
-        }, 80);
-
-        // Safety timeout — don't shuffle forever if something fails
-        const safety = setTimeout(() => {
-            clearInterval(interval);
-            setRolling(false);
-            console.error("Roll Aura: Socket timeout or server error.");
-        }, 8000);
-
+        let interval = setInterval(() => setRollingAura(AURA_ROLL_OPTIONS[Math.floor(Math.random() * AURA_ROLL_OPTIONS.length)]), 80);
+        const safety = setTimeout(() => { clearInterval(interval); setRolling(false); }, 8000);
         socket.emit("player:rollAura", { roomId }, res => {
             clearTimeout(safety);
             setTimeout(() => {
                 clearInterval(interval);
                 if (res?.success) {
                     setRollingAura(res.aura);
-                    // Premium Landing Burst (v4 syntax)
-                    animate(`#player-card-${myId}`, {
-                        scale: [1, 1.15, 1],
-                        rotate: [0, 5, -5, 0],
-                        duration: 800,
-                        ease: "outElastic(1, .5)",
-                    });
-                    
-                    // Server broadcasts player:auraUpdated so it updates locally via that listener too.
+                    animate(`#player-card-${myId}`, { scale: [1, 1.15, 1], rotate: [0, 5, -5, 0], duration: 800, ease: "outElastic(1, .5)" });
                     setTimeout(() => setRolling(false), 2000);
-                } else {
-                    setRolling(false);
-                    if (res?.error) alert(res.error);
-                }
+                } else { setRolling(false); if (res?.error) alert(res.error); }
             }, 1000);
         });
     }
 
-    // ── Guards ────────────────────────────────────────────────────────
+    function handleSelectAura(auraIdx) {
+        const aura = AURA_ROLL_OPTIONS[auraIdx]; if (!aura) return;
+        socket.emit("player:selectAura", { roomId, aura }, res => {
+            if (res?.success) {
+                setShowAuraPicker(false);
+                animate(`#player-card-${myId}`, { scale: [1, 1.15, 1], rotate: [0, 5, -5, 0], duration: 800, ease: "outElastic(1, .5)" });
+            } else if (res?.error) alert(res.error);
+        });
+    }
+
     if (reconnecting) return <ReconnectingScreen />;
-    if (gameOver)     return <GameOverScreen result={gameOver} onPlayAgain={playAgain} amHost={me?.isHost} />;
+    if (gameOver) return <GameOverScreen result={gameOver} onPlayAgain={playAgain} amHost={me?.isHost} />;
 
     const canTarget = p => {
         if (!me?.alive || p.id === myId) return false;
         if (isVoting) return p.alive;
-        if (isNight) {
-            if (myRole === "doctor") return p.inColdSleep;
-            if (myRole === "human")  return false;
-            return p.alive;
-        }
+        if (isNight) return (myRole === "doctor" ? p.inColdSleep : (myRole === "human" ? false : p.alive));
         return false;
     };
 
-    const aliveCount  = players.filter(p => p.alive).length;
-    const skipPhases  = ["DAY_DISCUSSION", "AFTERNOON"];
+    const aliveCount = players.filter(p => p.alive).length;
+    const skipPhases = ["DAY_DISCUSSION", "AFTERNOON"];
     const showSkipBar = skipPhases.includes(phase) && me?.alive;
 
-    // ── Shared overlays (used in both layouts) ────────────────────────
     const sharedOverlays = (
         <>
-            {/* Lost connection notice */}
             {lostConnectionNotice && (
-                <div style={{
-                    position: "fixed", top: 12, left: "50%", transform: "translateX(-50%)",
-                    zIndex: 999999, padding: "10px 20px", background: "#1a0008ee",
-                    border: "1px solid #ff2a2a55", color: "#ff8888", fontSize: 9,
-                    maxWidth: "90vw", textAlign: "center", boxShadow: "0 0 20px #000",
-                    pointerEvents: "none", animation: "fadeInUp 0.2s ease",
-                }}>
-                    {lostConnectionNotice}
-                </div>
+                <div style={{ position: "fixed", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 999999, padding: "10px 20px", background: "#1a0008ee", border: "1px solid #ff2a2a55", color: "#ff8888", fontSize: 9 }}>{lostConnectionNotice}</div>
             )}
-
-            {/* Vote Cancelled popup */}
             {voteDismissed && (
-                <div style={{
-                    position: "fixed", inset: 0, zIndex: 60,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "rgba(0,0,0,0.75)", animation: "fadeIn 0.2s ease",
-                    pointerEvents: "none",
-                }}>
-                    <div style={{
-                        border: "2px solid #ff883366", background: "#0d0020f2",
-                        padding: "28px 36px", textAlign: "center",
-                        boxShadow: "0 0 60px #000",
-                        animation: "fadeInUp 0.2s ease",
-                    }}>
-                        <div style={{ fontSize: 9, color: "#8a7aa0", letterSpacing: "0.15em", marginBottom: 12 }}>
-                            LAWYER
-                        </div>
-                        <div style={{ fontSize: 20, color: "#ff8833", marginBottom: 10 }}>
-                            <span className="text-red-400">Vote Dismissed</span>
-                        </div>
-                        <div style={{ fontSize: 9, color: "#c8b8ff" }}>
-                            Vote has been dismissed.<br />No one is eliminated.
-                        </div>
+                <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.75)" }}>
+                    <div style={{ border: "2px solid #ff883366", background: "#0d0020f2", padding: "28px 36px", textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: "#8a7aa0", marginBottom: 12 }}>LAWYER</div>
+                        <div style={{ fontSize: 20, color: "#ff8833", marginBottom: 10 }}>Vote Dismissed</div>
+                        <div style={{ fontSize: 9, color: "#c8b8ff" }}>Vote has been dismissed.<br />No one is eliminated.</div>
                     </div>
                 </div>
             )}
-
-            {/* Crew reveal (round 1 start) */}
             {showStartReveal && players.length > 0 && (
-                <StartReveal
-                    players={players}
-                    gnosiaCount={
-                        typeof session.lastPhasePayload?.gnosiaCount === "number"
-                            ? session.lastPhasePayload.gnosiaCount
-                            : typeof gnosiaCount === "number"
-                                ? gnosiaCount
-                                : Math.max(1, Math.floor(players.length / 3))
-                    }
-                    myId={myId}
-                    myRole={myRole}
-                    onDismiss={() => { setShowStartReveal(false); setShowOverlay(true); }}
-                />
+                <StartReveal players={players} gnosiaCount={session.lastPhasePayload?.gnosiaCount || gnosiaCount || 1} myId={myId} myRole={myRole} onDismiss={() => { setShowStartReveal(false); setShowOverlay(true); }} />
             )}
-
-            {/* Vote reveal animation */}
             {voteReveal && (
-                <div style={{
-                    position: "fixed", inset: 0, zIndex: 55,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: "linear-gradient(180deg,#07000ff0,#07000fcc)",
-                    overflow: "hidden",
-                }}>
-                    <div style={{
-                        position: "absolute", inset: 0, opacity: 0.8,
-                        backgroundImage:
-                            "radial-gradient(1px 1px at 10% 20%,#fff2 0%,transparent 100%)," +
-                            "radial-gradient(1px 1px at 60% 40%,#fff2 0%,transparent 100%)," +
-                            "radial-gradient(2px 2px at 30% 80%,#00f5ff10 0%,transparent 100%)," +
-                            "radial-gradient(2px 2px at 80% 15%,#9b30ff10 0%,transparent 100%)",
-                    }} />
-                    <div style={{
-                        width: "min(680px,92vw)", border: "1px solid #2a1a4a",
-                        background: "#0d0020cc", padding: "28px 26px",
-                        animation: "voteSlide 4.2s ease forwards",
-                        boxShadow: "0 0 60px #000",
-                    }}>
-                        <div style={{ fontSize: 9, color: "#8a7aa0", letterSpacing: "0.18em", marginBottom: 12 }}>
-                            VOTING RESULT
-                        </div>
-                        {voteReveal.eliminatedId ? (
-                            <>
-                                <div style={{ fontSize: 16, color: "#ffd700", textShadow: "0 0 14px #ffd70088", marginBottom: 10 }}>
-                                    {voteReveal.eliminatedUsername || "Unknown"} has been voted to Cold Sleep
-                                </div>
-                                <div style={{ fontSize: 9, color: "#8a7aa0" }}>Drifting into deep space...</div>
-                            </>
-                        ) : (
-                            <div style={{ fontSize: 12, color: "#8a7aa0" }}>
-                                {voteReveal.reason || "No one entered Cold Sleep."}
-                            </div>
-                        )}
+                <div style={{ position: "fixed", inset: 0, zIndex: 55, display: "flex", alignItems: "center", justifyContent: "center", background: "#07000ff0" }}>
+                    <div style={{ width: "min(680px,92vw)", border: "1px solid #2a1a4a", background: "#0d0020cc", padding: "28px 26px" }}>
+                        <div style={{ fontSize: 9, color: "#8a7aa0", marginBottom: 12 }}>VOTING RESULT</div>
+                        {voteReveal.eliminatedId ? <div style={{ fontSize: 16, color: "#ffd700" }}>{voteReveal.eliminatedUsername} has been voted to Cold Sleep</div> : <div style={{ fontSize: 12, color: "#8a7aa0" }}>{voteReveal.reason}</div>}
                     </div>
                 </div>
             )}
-
-            {/* Phase overlay */}
-            {showOverlay && !showStartReveal && phase !== "END" && (
-                <PhaseOverlay phase={phase} morningReport={morningReport}
-                    round={round} onDismiss={() => setShowOverlay(false)} />
-            )}
-
-            {/* Role info modal */}
+            {showOverlay && !showStartReveal && phase !== "END" && <PhaseOverlay phase={phase} morningReport={morningReport} round={round} onDismiss={() => setShowOverlay(false)} />}
             {showRoleInfo && myRole && (() => {
                 const info = ROLE_INFO[myRole] || ROLE_INFO.human;
-                const color = roleColor;
                 return (
-                    <div onClick={() => setShowRoleInfo(false)} style={{
-                        position: "fixed", inset: 0, zIndex: 55,
-                        background: "rgba(0,0,0,0.75)", display: "flex",
-                        alignItems: "center", justifyContent: "center", padding: 24,
-                        animation: "fadeIn 0.2s ease",
-                    }}>
-                        <div onClick={e => e.stopPropagation()} style={{
-                            border: `2px solid ${color}66`, padding: 32, maxWidth: 400, width: "100%",
-                            background: "#0d0020ee", boxShadow: `0 0 40px ${color}22`,
-                            display: "flex", flexDirection: "column", alignItems: "center", gap: 18,
-                        }}>
-                            <div style={{
-                                width: 72, height: 72, border: `2px solid ${color}`,
-                                boxShadow: `0 0 20px ${color}66`, background: color + "12",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                fontSize: 36,
-                            }}>
-                                {info.icon}
-                            </div>
-                            <div style={{ fontSize: 16, color, textShadow: `0 0 12px ${color}aa`, letterSpacing: "0.08em" }}>
-                                {myRole.toUpperCase()}
-                            </div>
-                            <p style={{ fontSize: 9, color: "#8a7aa0", textAlign: "center", lineHeight: 2 }}>
-                                {info.desc}
-                            </p>
-                            <button onClick={() => setShowRoleInfo(false)} style={{
-                                marginTop: 4, fontSize: 8, color: "#4a3060", border: "1px solid #2a1a4a",
-                                background: "transparent", padding: "8px 20px",
-                                cursor: "pointer", fontFamily: "Press Start 2P",
-                            }}>
-                                CLOSE
-                            </button>
+                    <div onClick={() => setShowRoleInfo(false)} style={{ position: "fixed", inset: 0, zIndex: 55, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div onClick={e => e.stopPropagation()} style={{ border: `2px solid ${roleColor}66`, padding: 32, maxWidth: 400, width: "100%", background: "#0d0020ee", display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+                            <div style={{ width: 72, height: 72, border: `2px solid ${roleColor}`, background: roleColor + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>{info.icon}</div>
+                            <div style={{ fontSize: 16, color: roleColor }}>{myRole.toUpperCase()}</div>
+                            <p style={{ fontSize: 9, color: "#8a7aa0", textAlign: "center", lineHeight: 2 }}>{info.desc}</p>
+                            <button onClick={() => setShowRoleInfo(false)} className="btn btn-secondary" style={{ fontSize: 8 }}>CLOSE</button>
                         </div>
                     </div>
                 );
             })()}
-
-            {/* Scanned alert banner */}
             {scannedAlert && (
-                <div style={{
-                    position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)",
-                    zIndex: 40, padding: "12px 24px",
-                    border: "1px solid #ff2a2a66", background: "#1a000899",
-                    animation: "fadeInUp 0.3s ease",
-                }}>
-                    <p style={{ fontSize: 9, color: "#ff2a2a", textShadow: "0 0 10px #ff2a2a" }}>
-                        ⚠  You have been scanned by the Engineer.
-                    </p>
+                <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 40, padding: "12px 24px", border: "1px solid #ff2a2a66", background: "#1a000899" }}>
+                    <p style={{ fontSize: 9, color: "#ff2a2a" }}>⚠ You have been scanned by the Engineer.</p>
                 </div>
             )}
-
-            {/* Night / scan / doctor / guardian result modal */}
             {resultModal && (
-                <div style={{
-                    position: "fixed", inset: 0, zIndex: 999999,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    padding: 18, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)",
-                    animation: "fadeIn 0.15s ease",
-                }} onClick={() => setResultModal(null)}>
-                    <div style={{
-                        width: "min(720px,94vw)",
-                        border: "2px solid " + (
-                            resultModal.variant === "danger"  ? "#ff2a2a66" :
-                            resultModal.variant === "success" ? "#b0ffb866" :
-                            resultModal.variant === "gold"    ? "#ffd70066" : "#00f5ff66"
-                        ),
-                        background: "#0d0020f2",
-                        boxShadow: "0 0 70px #000, 0 0 26px rgba(0,245,255,0.08)",
-                        padding: "26px 22px", textAlign: "center",
-                        animation: "fadeInUp 0.18s ease",
-                    }}>
-                        <div style={{ fontSize: 10, letterSpacing: "0.18em", color: "#8a7aa0", marginBottom: 14 }}>
-                            NIGHT RESULT
-                        </div>
-                        <div style={{
-                            fontSize: 18, marginBottom: 12,
-                            color: resultModal.variant === "danger"  ? "#ff2a2a" :
-                                   resultModal.variant === "success" ? "#b0ffb8" :
-                                   resultModal.variant === "gold"    ? "#ffd700" : "#00f5ff",
-                        }}>
-                            {resultModal.title}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#e0d4ff", lineHeight: 2 }}>
-                            {resultModal.message}
-                        </div>
+                <div style={{ position: "fixed", inset: 0, zIndex: 999999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)" }} onClick={() => setResultModal(null)}>
+                    <div style={{ width: "min(720px,94vw)", border: "2px solid " + (resultModal.variant === "danger" ? "#ff2a2a66" : resultModal.variant === "success" ? "#b0ffb866" : "#00f5ff66"), background: "#0d0020f2", padding: "26px 22px", textAlign: "center" }}>
+                        <div style={{ fontSize: 10, color: "#8a7aa0", marginBottom: 14 }}>NIGHT RESULT</div>
+                        <div style={{ fontSize: 18, marginBottom: 12, color: resultModal.variant === "danger" ? "#ff2a2a" : resultModal.variant === "success" ? "#b0ffb8" : "#00f5ff" }}>{resultModal.title}</div>
+                        <div style={{ fontSize: 12, color: "#e0d4ff", lineHeight: 2 }}>{resultModal.message}</div>
                         <div style={{ fontSize: 8, color: "#4a3060", marginTop: 16 }}>TAP TO DISMISS</div>
                     </div>
                 </div>
             )}
-
-            {/* Roll Aura Modal Overlay */}
             {isRolling && (
-                <div style={{
-                    position: "fixed", inset: 0, zIndex: 99999,
-                    background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    animation: "fadeIn 0.3s ease"
-                }}>
-                    <div style={{
-                        width: "min(320px, 90vw)", border: "2px solid #ffd70066",
-                        background: "#0d0020", padding: 24, textAlign: "center",
-                        boxShadow: "0 0 60px #000"
-                    }}>
-                        <div style={{ fontSize: 9, color: "#8a7aa0", letterSpacing: "0.2em", marginBottom: 20 }}>
-                            ROLLING AURA...
+                <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: "min(320px, 90vw)", border: "2px solid #ffd70066", background: "#0d0020", padding: 24, textAlign: "center" }}>
+                        <div style={{ fontSize: 9, color: "#8a7aa0", marginBottom: 20 }}>ROLLING AURA...</div>
+                        <div style={{ width: 120, height: 120, margin: "20px auto", borderRadius: "50%", background: "#07000f", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${AURA_PREVIEW[rollingAura]?.border || "#f5f5f588"}` }}>
+                            <img src={`/profiles/${me.profileId}.jpg`} alt="Me" style={{ width: "90%", height: "90%", borderRadius: "50%", objectFit: "cover", opacity: 0.8 }} />
                         </div>
-                        <div style={{
-                            width: 120, height: 120, margin: "20px auto",
-                            borderRadius: "50%", background: "#07000f",
-                            position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
-                            border: `2px solid ${AURA_PREVIEW[rollingAura]?.border || "#f5f5f588"}`,
-                            boxShadow: AURA_PREVIEW[rollingAura]?.shadow || "0 0 22px rgba(255, 255, 255, 0.16)"
-                        }}>
-                             <img src={`/profiles/${me.profileId}.jpg`} alt="Me"
-                                style={{ width: "90%", height: "90%", borderRadius: "50%", objectFit: "cover", opacity: 0.8 }} />
+                        <div style={{ fontSize: 8, color: AURA_PREVIEW[rollingAura]?.color || "#f5f5f5" }}>{AURA_PREVIEW[rollingAura]?.label || "RAGE MODE"}</div>
+                    </div>
+                </div>
+            )}
+            {showAuraPicker && (
+                <div className="aura-picker-overlay" onClick={() => setShowAuraPicker(false)}>
+                    <div className="aura-picker-content" onClick={e => e.stopPropagation()}>
+                        <div className="aura-picker-title">SELECT YOUR EMANATION</div>
+                        <div className="aura-picker-grid">
+                            {AURA_ROLL_OPTIONS.map((opt, idx) => (
+                                <button key={opt} className="aura-picker-option" onClick={() => handleSelectAura(idx)} style={{ color: AURA_PREVIEW[opt].color, textShadow: `0 0 10px ${AURA_PREVIEW[opt].color}66` }}>{AURA_PREVIEW[opt].label}</button>
+                            ))}
                         </div>
-                        <div style={{
-                            fontSize: 8,
-                            letterSpacing: "0.16em",
-                            color: AURA_PREVIEW[rollingAura]?.color || "#f5f5f5",
-                        }}>
-                            {AURA_PREVIEW[rollingAura]?.label || "RAGE MODE"}
-                        </div>
+                        <button className="aura-picker-close" onClick={() => setShowAuraPicker(false)}>CANCEL</button>
                     </div>
                 </div>
             )}
         </>
     );
 
-    // ── TOP BAR (shared) ─────────────────────────────────────────────
     const topBar = (
-        <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "10px 16px", borderBottom: "1px solid #1a0a2a",
-            background: "#08001299", flexShrink: 0, flexWrap: "wrap", gap: 10,
-        }}>
-            {/* Phase + round */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <div style={{
-                    fontSize: isMobile ? 8 : 10, border: `1px solid ${phaseColor}55`,
-                    color: phaseColor, padding: isMobile ? "5px 10px" : "6px 14px",
-                    background: phaseColor + "0a",
-                }}>
-                    {phase.replace(/_/g, " ")}
-                </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid #1a0a2a", background: "#08001299", flexShrink: 0, flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ fontSize: isMobile ? 8 : 10, border: `1px solid ${phaseColor}55`, color: phaseColor, padding: "6px 14px", background: phaseColor + "0a" }}>{phase.replace(/_/g, " ")}</div>
                 <div style={{ fontSize: 9, color: "#4a3060" }}>RND {round}</div>
             </div>
-
-            {/* Timer */}
             {timers.endsAt && <PhaseTimer endsAt={timers.endsAt} color={phaseColor} />}
-
-            {/* Right controls */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                {!isMobile && (
-                    <div style={{ fontSize: 9, color: "#2a1a3a" }}>{roomId}</div>
-                )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {me && !me.alive && (
-                    <div style={{
-                        fontSize: isMobile ? 8 : 9, border: "1px solid #7a000055",
-                        color: "#ffffff", padding: isMobile ? "5px 10px" : "6px 14px",
-                        background: "#5a0000",
-                    }}>
+                    <div className="btn-topbar" style={{ background: "#5a0000", border: "1px solid #7a0000", cursor: "default" }}>
                         DEAD
                     </div>
                 )}
-                <div
-                    onClick={() => setShowRoleInfo(true)}
-                    style={{
-                        fontSize: isMobile ? 8 : 9, border: `1px solid ${roleColor}55`,
-                        color: roleColor, padding: isMobile ? "5px 10px" : "6px 14px",
-                        background: roleColor + "0a", cursor: "pointer",
-                    }}>
+                <button onClick={() => setShowRoleInfo(true)} className="btn-topbar" style={{ border: `1px solid ${roleColor}55`, color: roleColor }}>
                     {myRole?.toUpperCase()} ?
-                </div>
-
-                {/* Dead player: Roll Aura button */}
+                </button>
                 {me && !me.alive && (
-                    <button
-                        onClick={handleRoll}
-                        disabled={isRolling || (me?.rollsRemaining ?? 0) <= 0}
-                        style={{
-                            fontSize: isMobile ? 8 : 9, border: "1px solid #ffd70055",
-                            background: (isRolling || (me?.rollsRemaining ?? 0) <= 0) ? "#1a1a2a" : "#0d0020",
-                            color: (isRolling || (me?.rollsRemaining ?? 0) <= 0) ? "#4a3060" : "#ffd700",
-                            padding: isMobile ? "8px 12px" : "10px 16px",
-                            cursor: (isRolling || (me?.rollsRemaining ?? 0) <= 0) ? "default" : "pointer",
-                            fontFamily: "Press Start 2P"
-                        }}>
-                        🎲 ROLL AURA ({me?.rollsRemaining ?? 0})
+                    <button 
+                        onClick={handleRoll} 
+                        disabled={isRolling || (me?.rollsRemaining ?? 0) <= 0} 
+                        className="btn-topbar" 
+                        style={{ border: "1px solid #ffd70055", color: "#ffd700" }}
+                    >
+                        <BsStars style={{ color: "#ffd700" }} /> ROLL AURA ({me?.rollsRemaining ?? 0})
                     </button>
                 )}
-
-                {/* Desktop: chat toggle */}
+                {me && !me.alive && me.isHost && (
+                    <button 
+                        onClick={() => setShowAuraPicker(true)} 
+                        className="btn-topbar" 
+                        style={{ border: "1px solid #00f5ff55", color: "#00f5ff" }}
+                    >
+                        <BsStars style={{ color: "#00f5ff" }} />
+                    </button>
+                )}
                 {!isMobile && (
-                    <button onClick={() => setDesktopChat(o => !o)} style={{
-                        fontSize: 8, color: "#8a7aa0", border: "1px solid #2a1a4a",
-                        background: "transparent", padding: "6px 12px",
-                        cursor: "pointer", fontFamily: "Press Start 2P",
-                    }}>
+                    <button onClick={() => setDesktopChat(o => !o)} className="btn-topbar" style={{ color: "#8a7aa0" }}>
                         {desktopChat ? "HIDE CHAT" : "SHOW CHAT"}
-                    </button>
-                )}
-
-                {/* Mobile: chat bubble button */}
-                {isMobile && (
-                    <button onClick={() => setMobileChatOpen(o => !o)} style={{
-                        position: "relative",
-                        width: 38, height: 38,
-                        border: `1px solid ${totalUnread > 0 ? "#00f5ff88" : "#2a1a4a"}`,
-                        background: totalUnread > 0 ? "#00f5ff11" : "transparent",
-                        color: "#00f5ff", fontSize: 18,
-                        cursor: "pointer", display: "flex",
-                        alignItems: "center", justifyContent: "center",
-                        flexShrink: 0,
-                    }}>
-                        💬
-                        {totalUnread > 0 && (
-                            <div style={{
-                                position: "absolute", top: -6, right: -6,
-                                background: "#ff2a2a", color: "#fff",
-                                fontSize: 8, fontFamily: "Press Start 2P",
-                                width: 18, height: 18, borderRadius: "50%",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                boxShadow: "0 0 8px #ff2a2a",
-                                animation: "fadeInUp 0.2s ease",
-                            }}>
-                                {totalUnread > 9 ? "9+" : totalUnread}
-                            </div>
-                        )}
-                    </button>
-                )}
-
-                {phase === "LOBBY" && (
-                    <button onClick={leaveRoom} style={{
-                        fontSize: 8, color: "#ff2a2a", border: "1px solid #ff2a2a44",
-                        background: "transparent", padding: "6px 12px",
-                        cursor: "pointer", fontFamily: "Press Start 2P",
-                    }}>
-                        LEAVE
                     </button>
                 )}
             </div>
         </div>
     );
 
-    // ── Night panel / player grid (left column content) ──────────────
     const leftColumnContent = (
         <>
             {isNight ? (
                 me?.alive ? (
-                    <NightPanel
-                        myRole={myRole} players={players} myId={myId}
-                        gnosiaAllies={allies}
-                        selectedTarget={selectedTarget} onSelect={setSelectedTarget}
-                        submitted={nightSubmitted} actionMsg={actionMsg}
-                        actionError={actionError} onConfirm={submitNightAction}
-                        gnosiaVoteProgress={gnosiaVP}
-                        scanResult={scanResult} inspectResult={inspectResult}
-                        guardianResult={guardianResult}
-                    />
+                    <NightPanel myRole={myRole} players={players} myId={myId} gnosiaAllies={allies} selectedTarget={selectedTarget} onSelect={setSelectedTarget} submitted={nightSubmitted} actionMsg={actionMsg} actionError={actionError} onConfirm={submitNightAction} gnosiaVoteProgress={gnosiaVP} scanResult={scanResult} inspectResult={inspectResult} guardianResult={guardianResult} />
                 ) : (
                     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
                         <div style={{ fontSize: 36, opacity: 0.15 }}>☽</div>
@@ -993,269 +649,112 @@ export default function Game({ session, socket, onLeaveRoom }) {
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
                     {isVoting && <VoteProgressBar votesCast={voteProgress.votesCast} totalAlive={voteProgress.totalAlive} />}
-
-                    {/* Player grid */}
                     <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                            <span style={{ fontSize: 9, color: "#4a3060", letterSpacing: "0.1em" }}>CREW MANIFEST</span>
+                            <span style={{ fontSize: 9, color: "#4a3060" }}>CREW MANIFEST</span>
                             <span style={{ fontSize: 9, color: "#4a3060" }}>{aliveCount} alive / {players.length}</span>
                         </div>
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fill, minmax(130px,1fr))",
-                            gap: 10,
-                        }}>
-                            {players.map(p => (
-                                <PlayerCard key={p.id} player={p}
-                                    isMe={p.id === myId}
-                                    isSelected={selectedTarget === p.id}
-                                    canSelect={me?.alive && canTarget(p)}
-                                    onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)}
-                                    phase={phase} myRole={myRole}
-                                    gnosiaAllies={allies.map(a => a.id)}
-                                    voteBreakdown={voteBreakdown}
-                                    allPlayers={players}
-                                />
-                            ))}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px,1fr))", gap: 10 }}>
+                            {players.map(p => <PlayerCard key={p.id} player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} />)}
                         </div>
                     </div>
-
-                    {/* Voting action bar */}
                     {isVoting && me?.alive && (
                         <div style={{ flexShrink: 0, borderTop: "1px solid #1a0a2a", padding: "14px 16px", background: "#07000f" }}>
                             {actionError && <div style={{ fontSize: 8, color: "#ff2a2a", marginBottom: 8 }}>⚠ {actionError}</div>}
-                            {actionMsg  && <div style={{ fontSize: 8, color: "#00f5ff", marginBottom: 8 }}>{actionMsg}</div>}
-                            <button className="btn btn-gold" style={{ width: "100%", fontSize: 10 }}
-                                onClick={submitVote} disabled={!selectedTarget || hasVoted}>
-                                {hasVoted
-                                    ? "✓ VOTE LOCKED"
-                                    : selectedTarget
-                                        ? `⚖  VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
-                                        : "SELECT WHO TO VOTE OUT"}
-                            </button>
-                            {myRole === "lawyer" && (
-                                <button style={{
-                                    width: "100%", marginTop: 10, padding: "10px", fontSize: 9,
-                                    background: hasLawyerDismissed ? "#1a0a2a" : "#7a3a00",
-                                    color: hasLawyerDismissed ? "#3a2a4a" : "#ffbb55",
-                                    border: `1px solid ${hasLawyerDismissed ? "#2a1a3a" : "#ff8833"}`,
-                                    cursor: hasLawyerDismissed ? "not-allowed" : "pointer",
-                                    fontFamily: "Press Start 2P",
-                                }} onClick={dismissVote} disabled={hasLawyerDismissed}>
-                                    {hasLawyerDismissed ? "DISMISS USED" : "⚖ DISMISS VOTE (1×)"}
-                                </button>
-                            )}
+                            {actionMsg && <div style={{ fontSize: 8, color: "#00f5ff", marginBottom: 8 }}>{actionMsg}</div>}
+                            <button className="btn btn-gold" style={{ width: "100%", fontSize: 10 }} onClick={submitVote} disabled={!selectedTarget || hasVoted}>{hasVoted ? "✓ VOTE LOCKED" : selectedTarget ? `⚖ VOTE: ${players.find(p => p.id === selectedTarget)?.username}` : "SELECT TO VOTE"}</button>
+                            {myRole === "lawyer" && <button style={{ width: "100%", marginTop: 10, padding: "10px", fontSize: 9, background: hasLawyerDismissed ? "#1a0a2a" : "#7a3a00", color: hasLawyerDismissed ? "#3a2a4a" : "#ffbb55", border: "1px solid #ff8833", fontFamily: "Press Start 2P" }} onClick={dismissVote} disabled={hasLawyerDismissed}>{hasLawyerDismissed ? "DISMISS USED" : "⚖ DISMISS VOTE"}</button>}
                         </div>
                     )}
-
-                    {/* Skip phase bar */}
                     {showSkipBar && (
                         <div style={{ flexShrink: 0, borderTop: "1px solid #1a0a2a", padding: "12px 16px", background: "#07000f" }}>
-                            <SkipBar skipVotes={skipVotes} myId={myId}
-                                onSkip={requestSkipPhase}
-                                actionError={actionError} actionMsg={actionMsg} />
+                            <SkipBar skipVotes={skipVotes} myId={myId} onSkip={requestSkipPhase} actionError={actionError} actionMsg={actionMsg} />
                         </div>
                     )}
-
-                    {/* Spectator bar */}
-                    {!me?.alive && (
-                        <div style={{ flexShrink: 0, borderTop: "1px solid #1a0a2a", padding: "12px 16px", textAlign: "center" }}>
-                            <span style={{ fontSize: 9, color: "#2a1a3a" }}>YOU ARE IN COLD SLEEP — SPECTATING</span>
-                        </div>
-                    )}
+                    {!me?.alive && <div style={{ flexShrink: 0, borderTop: "1px solid #1a0a2a", padding: "12px 16px", textAlign: "center" }}><span style={{ fontSize: 9, color: "#2a1a3a" }}>SPECTATING</span></div>}
                 </div>
             )}
         </>
     );
 
-    // ─────────────────────────────────────────────────────────────────
-    // RENDER
-    // ─────────────────────────────────────────────────────────────────
     return (
         <div className="crt star-bg" style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {sharedOverlays}
             {topBar}
-
-            {/* ── MOBILE LAYOUT ──────────────────────────────────── */}
             {isMobile ? (
-                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
-
-                    {/* Compact player row - Shown normally, hidden for Gnosia Focus Mode at night */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
                     {!(isNight && myRole === "gnosia") && (
                         <div style={{ flexShrink: 0, borderBottom: "1px solid #1a0a2a", background: "#07000f", overflowY: "auto", maxHeight: 210 }}>
                             <div style={{ padding: "10px 12px" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                                    <span style={{ fontSize: 8, color: "#4a3060" }}>CREW</span>
-                                    <span style={{ fontSize: 8, color: "#4a3060" }}>{aliveCount}/{players.length}</span>
-                                </div>
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                    {players.map(p => (
-                                        <div key={p.id} style={{ width: 76, flexShrink: 0 }}>
-                                            <PlayerCard player={p}
-                                                isMe={p.id === myId}
-                                                isSelected={selectedTarget === p.id}
-                                                canSelect={me?.alive && canTarget(p)}
-                                                onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)}
-                                                phase={phase} myRole={myRole}
-                                                gnosiaAllies={allies.map(a => a.id)}
-                                                voteBreakdown={voteBreakdown}
-                                                allPlayers={players}
-                                                compact={true}
-                                            />
-                                        </div>
-                                    ))}
+                                    {players.map(p => <div key={p.id} style={{ width: 76 }}><PlayerCard player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} compact={true} /></div>)}
                                 </div>
                             </div>
                         </div>
                     )}
-
-                    {/* Mobile action bar */}
                     {isNight && me?.alive ? (
-                        <div style={{ flex: 1, overflow: "hidden" }}>
-                            <NightPanel
-                                myRole={myRole} players={players} myId={myId}
-                                gnosiaAllies={allies}
-                                selectedTarget={selectedTarget} onSelect={setSelectedTarget}
-                                submitted={nightSubmitted} actionMsg={actionMsg}
-                                actionError={actionError} onConfirm={submitNightAction}
-                                gnosiaVoteProgress={gnosiaVP}
-                                scanResult={scanResult} inspectResult={inspectResult}
-                                guardianResult={guardianResult}
-                            />
-                        </div>
+                        <div style={{ flex: 1, overflow: "hidden" }}><NightPanel myRole={myRole} players={players} myId={myId} gnosiaAllies={allies} selectedTarget={selectedTarget} onSelect={setSelectedTarget} submitted={nightSubmitted} actionMsg={actionMsg} actionError={actionError} onConfirm={submitNightAction} gnosiaVoteProgress={gnosiaVP} scanResult={scanResult} inspectResult={inspectResult} guardianResult={guardianResult} /></div>
                     ) : (
                         <div style={{ flexShrink: 0 }}>
-                            {isVoting && <VoteProgressBar votesCast={voteProgress.votesCast} totalAlive={voteProgress.totalAlive} />}
-                            <div style={{ padding: "12px 16px", background: "#0d0020", borderTop: "1px solid #1a0a2a", display: "flex", flexDirection: "column", gap: 10 }}>
-                                {isVoting && me?.alive && (
-                                    <>
-                                        {actionError && <div style={{ fontSize: 8, color: "#ff2a2a" }}>⚠ {actionError}</div>}
-                                        {actionMsg  && <div style={{ fontSize: 8, color: "#00f5ff" }}>{actionMsg}</div>}
-                                        <button className="btn btn-gold" style={{ width: "100%", fontSize: 9, padding: "10px" }}
-                                            onClick={submitVote} disabled={!selectedTarget || hasVoted}>
-                                            {hasVoted ? "✓ VOTE LOCKED"
-                                                : selectedTarget ? `⚖ VOTE: ${players.find(p => p.id === selectedTarget)?.username || "..."}`
-                                                : "SELECT WHO TO VOTE OUT"}
-                                        </button>
-                                        {myRole === "lawyer" && (
-                                            <button style={{
-                                                width: "100%", padding: "10px", fontSize: 8,
-                                                background: hasLawyerDismissed ? "#1a0a2a" : "#7a3a00",
-                                                color: hasLawyerDismissed ? "#3a2a4a" : "#ffbb55",
-                                                border: `1px solid ${hasLawyerDismissed ? "#2a1a3a" : "#ff8833"}`,
-                                                cursor: hasLawyerDismissed ? "not-allowed" : "pointer",
-                                                fontFamily: "Press Start 2P",
-                                            }} onClick={dismissVote} disabled={hasLawyerDismissed}>
-                                                {hasLawyerDismissed ? "DISMISS USED" : "⚖ DISMISS VOTE (1×)"}
-                                            </button>
-                                        )}
-                                    </>
-                                )}
-                                {showSkipBar && (
-                                    <SkipBar skipVotes={skipVotes} myId={myId}
-                                        onSkip={requestSkipPhase}
-                                        actionError={isVoting ? "" : actionError}
-                                        actionMsg={isVoting ? "" : actionMsg} />
-                                )}
-                                {!me?.alive && (
-                                    <div style={{ textAlign: "center" }}>
-                                        <span style={{ fontSize: 8, color: "#2a1a3a" }}>YOU ARE IN COLD SLEEP — SPECTATING</span>
-                                    </div>
-                                )}
+                            <div style={{ padding: "12px 16px", background: "#0d0020", display: "flex", flexDirection: "column", gap: 10 }}>
+                                {isVoting && me?.alive && <button className="btn btn-gold" style={{ width: "100%", fontSize: 9 }} onClick={submitVote} disabled={!selectedTarget || hasVoted}>{hasVoted ? "✓ LOCKED" : "⚖ VOTE"}</button>}
+                                {showSkipBar && <SkipBar skipVotes={skipVotes} myId={myId} onSkip={requestSkipPhase} />}
                             </div>
                         </div>
                     )}
-
-                    {/* Chat fills remaining space on mobile */}
-                    {!(isNight && me?.alive && myRole === "gnosia") && (
-                        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-                            <ChatPanel
-                                roomId={roomId} myRole={myRole}
-                                isAlive={me?.alive ?? true}
-                                phase={phase} socket={socket}
-                                isPanelOpen={true}
-                                onUnreadChange={setUnread}
-                            />
-                        </div>
-                    )}
-
-                    {isNight && me?.alive && myRole === "gnosia" && (
-                        <div style={{
-                            flexShrink: 0, padding: "12px 16px", background: "#0d0020",
-                            borderTop: "1px solid #1a0a2a", display: "flex", gap: 10
-                        }}>
-                            <button className="btn btn-secondary" style={{ flex: 1, fontSize: 8 }}
-                                onClick={() => setMobileChatOpen(true)}>
-                                💬 {unread.public + unread.gnosia > 0 ? `(${unread.public + unread.gnosia}) ` : ""}OPEN CHAT
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Mobile chat modal (slide-up overlay) */}
+                    <div style={{ flex: 1, minHeight: 0 }}>
+                        <ChatPanel 
+                            roomId={roomId} myRole={myRole} isAlive={me?.alive ?? true} phase={phase} socket={socket} 
+                            isPanelOpen={true}
+                            pubMsgs={pubMsgs} gnMsgs={gnMsgs}
+                            unreadPub={unreadPub} unreadGn={unreadGn}
+                            onViewTab={handleClearUnread}
+                            onExpand={() => setMobileChatOpen(true)}
+                            tab={activeChatTab}
+                            onTabChange={setActiveChatTab}
+                        />
+                    </div>
+                    
+                    {/* Mobile Chat Modal Overlay */}
                     {mobileChatOpen && (
-                        <div style={{
-                            position: "fixed", inset: 0, zIndex: 200,
-                            background: "#07000ff5",
-                            display: "flex", flexDirection: "column",
-                            animation: "fadeInUp 0.2s ease",
-                        }}>
-                            {/* Modal header */}
-                            <div style={{
-                                display: "flex", alignItems: "center", justifyContent: "space-between",
-                                padding: "14px 16px", borderBottom: "1px solid #1a0a2a",
-                                background: "#0d0020", flexShrink: 0,
-                            }}>
-                                <span style={{ fontSize: 10, color: "#00f5ff" }}>CREW CHAT</span>
-                                <button onClick={() => setMobileChatOpen(false)} style={{
-                                    background: "transparent", border: "1px solid #2a1a4a",
-                                    color: "#8a7aa0", cursor: "pointer",
-                                    fontFamily: "Press Start 2P", fontSize: 10,
-                                    width: 36, height: 36,
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                }}>
+                        <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "#07000ffc", display: "flex", flexDirection: "column", animation: "fadeInUp 0.3s ease-out" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #1a0a2a", background: "#0d0020" }}>
+                                <span style={{ fontSize: 10, color: "#00f5ff", fontFamily: "Press Start 2P" }}>CREW CHAT</span>
+                                <button 
+                                    onClick={() => setMobileChatOpen(false)}
+                                    className="btn-topbar"
+                                    style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #ff2a2a44", color: "#ff2a2a" }}
+                                >
                                     ✕
                                 </button>
                             </div>
-                            {/* Full chat panel inside modal */}
-                            <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-                                <ChatPanel
-                                    roomId={roomId} myRole={myRole}
-                                    isAlive={me?.alive ?? true}
-                                    phase={phase} socket={socket}
-                                    isPanelOpen={mobileChatOpen}
-                                    onUnreadChange={counts => {
-                                        setUnread(counts);
-                                        // Clear unread when modal is open
-                                        if (mobileChatOpen) setUnread({ public: 0, gnosia: 0 });
-                                    }}
+                            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                                <ChatPanel 
+                                    roomId={roomId} myRole={myRole} isAlive={me?.alive ?? true} phase={phase} socket={socket} 
+                                    isPanelOpen={true}
+                                    pubMsgs={pubMsgs} gnMsgs={gnMsgs}
+                                    unreadPub={unreadPub} unreadGn={unreadGn}
+                                    onViewTab={handleClearUnread}
+                                    tab={activeChatTab}
+                                    onTabChange={setActiveChatTab}
                                 />
                             </div>
                         </div>
                     )}
                 </div>
-
             ) : (
-                /* ── DESKTOP LAYOUT ────────────────────────────────── */
-                <div style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}>
-                    {/* Left column */}
-                    <div style={{
-                        display: "flex", flexDirection: "column", overflow: "hidden",
-                        borderRight: desktopChat ? "1px solid #1a0a2a" : "none",
-                        width: desktopChat ? "50%" : "100%",
-                        transition: "width 0.2s",
-                    }}>
-                        {leftColumnContent}
-                    </div>
-
-                    {/* Right column: chat */}
+                <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+                    <div style={{ display: "flex", flexDirection: "column", flex: 1, width: desktopChat ? "50%" : "100%" }}>{leftColumnContent}</div>
                     {desktopChat && (
-                        <div style={{ display: "flex", flexDirection: "column", overflow: "hidden", flex: 1, minWidth: 0 }}>
-                            <ChatPanel
-                                roomId={roomId} myRole={myRole}
-                                isAlive={me?.alive ?? true}
-                                phase={phase} socket={socket}
+                        <div style={{ flex: 1 }}>
+                            <ChatPanel 
+                                roomId={roomId} myRole={myRole} isAlive={me?.alive ?? true} phase={phase} socket={socket} 
                                 isPanelOpen={true}
-                                onUnreadChange={setUnread}
+                                pubMsgs={pubMsgs} gnMsgs={gnMsgs}
+                                unreadPub={unreadPub} unreadGn={unreadGn}
+                                onViewTab={handleClearUnread}
+                                tab={activeChatTab}
+                                onTabChange={setActiveChatTab}
                             />
                         </div>
                     )}

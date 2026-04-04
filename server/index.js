@@ -483,6 +483,25 @@ io.on("connection", (socket) => {
         reply(cb, { success: true, aura: picked, rollsRemaining: player.rollsRemaining });
     });
 
+    bindAckHandler("player:selectAura", ({ roomId, aura }, cb) => {
+        console.log(`[SELECT] Host ${socket.id} selecting aura ${aura} in room ${roomId}`);
+        const gs = getRoom(roomId);
+        if (!gs) return reply(cb, { success: false, error: "Room not found." });
+        const player = gs.players.find(p => p.id === socket.id);
+        if (!player) return reply(cb, { success: false, error: "Player not found." });
+        
+        // Manual selection only for the host after death
+        if (!player.isHost) return reply(cb, { success: false, error: "Only the host can manually select an aura." });
+        if (player.alive && !player.inColdSleep) return reply(cb, { success: false, error: "Only the departed may change their aura." });
+
+        player.aura = aura;
+        console.log(`[SELECT] Success: Host ${player.username} selected ${aura}`);
+
+        io.to(roomId).emit("player:auraUpdated", { playerId: socket.id, aura, rollsRemaining: player.rollsRemaining });
+        reply(cb, { success: true, aura });
+    });
+
+
     // ── HOST DEBUG ────────────────────────────────────────────────────
     bindAckHandler("phase:forceAdvance", ({ roomId }, cb) => {
         const gs = getRoom(roomId);

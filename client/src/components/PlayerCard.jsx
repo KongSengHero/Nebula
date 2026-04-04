@@ -107,6 +107,10 @@ const AURA_CONFIG = {
         label: "Pink Sparkles",
         columns: SPARKLE_COLUMNS,
     },
+    "aura-judgement": {
+        label: "Judgement",
+        columns: [], // Removed blades as requested
+    },
 };
 
 export default function PlayerCard({
@@ -157,6 +161,10 @@ export default function PlayerCard({
         borderColor = "transparent";
         bgColor = "#020202";
         shadow = "0 0 16px rgba(0, 255, 0, 0.12)";
+    } else if (player.aura === "aura-judgement") {
+        borderColor = "transparent";
+        bgColor = "#050508";
+        shadow = "0 18px 48px rgba(0, 0, 0, 0.72), 0 0 32px rgba(0, 245, 255, 0.2)";
     }
 
     const avatarBorderColor = player.aura === "aura-rage-mode"
@@ -165,9 +173,11 @@ export default function PlayerCard({
             ? "rgba(255, 216, 94, 0.88)"
             : player.aura === "aura-glacier"
                 ? "rgba(168, 242, 255, 0.88)"
-                : isDead
-                    ? "#1a0a2a"
-                    : `${color}bb`;
+                : player.aura === "aura-judgement"
+                    ? "#00f5ff"
+                    : isDead
+                        ? "#1a0a2a"
+                        : `${color}bb`;
 
     const avatarBackground = player.aura === "aura-rage-mode"
         ? "rgba(255, 255, 255, 0.03)"
@@ -175,7 +185,9 @@ export default function PlayerCard({
             ? "rgba(255, 215, 0, 0.1)"
             : player.aura === "aura-glacier"
                 ? "rgba(136, 218, 255, 0.08)"
-                : `${color}15`;
+                : player.aura === "aura-judgement"
+                    ? "rgba(0, 245, 255, 0.08)"
+                    : `${color}15`;
 
     const avatarShadow = player.aura === "aura-rage-mode"
         ? "0 0 18px rgba(255, 255, 255, 0.12)"
@@ -183,9 +195,11 @@ export default function PlayerCard({
             ? "0 0 22px rgba(255, 215, 0, 0.26)"
             : player.aura === "aura-glacier"
                 ? "0 0 22px rgba(124, 228, 255, 0.22)"
-                : isDead
-                    ? "0 0 20px rgba(255, 0, 0, 0.3), inset 0 0 15px rgba(255, 0, 0, 0.2)"
-                    : `0 4px 14px ${color}44`;
+                : player.aura === "aura-judgement"
+                    ? "0 0 26px rgba(0, 245, 255, 0.28)"
+                    : isDead
+                        ? "0 0 20px rgba(255, 0, 0, 0.3), inset 0 0 15px rgba(255, 0, 0, 0.2)"
+                        : `0 4px 14px ${color}44`;
 
     const cardClassName = ["player-card-frame", hasAura ? `has-aura ${player.aura}` : ""]
         .filter(Boolean)
@@ -305,6 +319,41 @@ export default function PlayerCard({
                                     <span className="rage-eye rage-eye--right">
                                         <span className="rage-eye__pupil" />
                                     </span>
+                                </div>
+                            </>
+                        )}
+
+                        {player.aura === "aura-judgement" && (
+                            <>
+                                {/* Void veil — drowns avatar in darkness */}
+                                <div className="j-veil" aria-hidden="true" />
+
+                                <div className="judgement-eyes" aria-hidden="true">
+                                    {/* Viewer-LEFT = Cold white raging eye */}
+                                    <div className="j-eye-wrapper j-eye--cold">
+                                        <div className="j-eye-shape" />
+
+                                        {/* Cold Wisps */}
+                                        <div className="j-wisp jw-co" />
+                                        <div className="j-wisp jw-ci" />
+                                        <div className="j-wisp jw-ct" />
+                                    </div>
+
+                                    {/* Viewer-RIGHT = Sans Cyan flame raging eye */}
+                                    <div className="j-eye-wrapper j-eye--flame">
+                                        <div className="j-eye-shape" />
+
+                                        {/* Flame Wisps */}
+                                        <div className="j-wisp jw-fo" />
+                                        <div className="j-wisp jw-fi" />
+                                        <div className="j-wisp jw-ft" />
+
+                                        {/* Embers drifting off the active eye */}
+                                        <div className="j-emb je1" />
+                                        <div className="j-emb je2" />
+                                        <div className="j-emb je3" />
+                                        <div className="j-emb je4" />
+                                    </div>
                                 </div>
                             </>
                         )}
