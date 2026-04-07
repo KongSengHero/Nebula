@@ -185,6 +185,7 @@ export default function PlayerCard({
     phase, myRole, gnosiaAllies = [],
     voteBreakdown = {}, allPlayers = [], compact = false,
     auraVisibility = "all",
+    emoteVisibility = "all",
     activeEmote = null,
     onHoldComplete = null,
 }) {
@@ -383,10 +384,10 @@ export default function PlayerCard({
             }}>
 
             {/* Active emote popup */}
-            {activeEmote && (
+            {activeEmote && (emoteVisibility === "all" || (emoteVisibility === "self" && isMe)) && (
                 <div style={{
                     position: "absolute",
-                    top: compact ? -62 : -24,
+                    top: compact ? -14 : -24,
                     left: "50%",
                     transform: "translateX(-50%)",
                     zIndex: 30,
@@ -408,9 +409,9 @@ export default function PlayerCard({
                             src={activeEmote.src}
                             alt={activeEmote.label}
                             style={{
-                                width: compact ? 64 : 76,
-                                height: compact ? 64 : 76,
-                                objectFit: "cover",
+                                width: compact ? 80 : 90,
+                                height: "auto",
+                                objectFit: "contain",
                                 borderRadius: 6,
                                 display: "block",
                             }}

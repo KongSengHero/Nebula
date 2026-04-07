@@ -458,7 +458,8 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
     const [rollingAura, setRollingAura] = useState("aura-rage-mode");
     const [showAuraPicker, setShowAuraPicker] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [auraVisibility, setAuraVisibility] = useState("all");
+    const [auraVisibility,   setAuraVisibility]   = useState("all");
+    const [emoteVisibility,  setEmoteVisibility]  = useState("all");
 
     // Emote state
     const [playerEmotes,  setPlayerEmotes]  = useState({});  // { [playerId]: { src, label, id } }
@@ -868,6 +869,32 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
                                 active={auraVisibility === "all"}
                                 onClick={() => setAuraVisibility("all")}
                             />
+                            <div style={{ height: 1, background: "linear-gradient(90deg, transparent, #2a1a4a, transparent)", margin: "6px 0" }} />
+                            <div style={{ fontSize: 8, color: "#8a7aa0", letterSpacing: "0.12em", marginBottom: 6 }}>EMOTES</div>
+                            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                                <div style={{ flex: "1 1 220px" }}>
+                                    <SettingsActionButton
+                                        label="HIDE ALL EMOTES"
+                                        status={emoteVisibility === "none" ? "ACTIVE" : "OFF"}
+                                        active={emoteVisibility === "none"}
+                                        onClick={() => setEmoteVisibility("none")}
+                                    />
+                                </div>
+                                <div style={{ flex: "1 1 220px" }}>
+                                    <SettingsActionButton
+                                        label="HIDE OTHERS EMOTES"
+                                        status={emoteVisibility === "self" ? "ACTIVE" : "OFF"}
+                                        active={emoteVisibility === "self"}
+                                        onClick={() => setEmoteVisibility("self")}
+                                    />
+                                </div>
+                            </div>
+                            <SettingsActionButton
+                                label="SHOW ALL EMOTES"
+                                status={emoteVisibility === "all" ? "ACTIVE" : "OFF"}
+                                active={emoteVisibility === "all"}
+                                onClick={() => setEmoteVisibility("all")}
+                            />
                             <div style={{ fontSize: 8, color: "#b97b4e", lineHeight: 1.8, marginTop: 6 }}>
                                 These settings affect only your screen.
                             </div>
@@ -969,7 +996,7 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
                             <span style={{ fontSize: 9, color: "#4a3060" }}>{aliveCount} alive / {players.length}</span>
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px,1fr))", gap: 10 }}>
-                            {players.map(p => <PlayerCard key={p.id} player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} auraVisibility={auraVisibility} activeEmote={playerEmotes[p.id]} onHoldComplete={p.id === myId ? handleHoldComplete : undefined} />)}
+                            {players.map(p => <PlayerCard key={p.id} player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} auraVisibility={auraVisibility} emoteVisibility={emoteVisibility} activeEmote={playerEmotes[p.id]} onHoldComplete={p.id === myId ? handleHoldComplete : undefined} />)}
                         </div>
                     </div>
                     {isVoting && me?.alive && (
@@ -1001,7 +1028,7 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
                         <div style={{ flexShrink: 0, borderBottom: "1px solid #1a0a2a", background: "#07000f", overflowY: "auto", maxHeight: 210 }}>
                             <div style={{ padding: "10px 12px" }}>
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                    {players.map(p => <div key={p.id} style={{ width: 76 }}><PlayerCard player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} compact={true} auraVisibility={auraVisibility} activeEmote={playerEmotes[p.id]} onHoldComplete={p.id === myId ? handleHoldComplete : undefined} /></div>)}
+                                    {players.map(p => <div key={p.id} style={{ width: 76 }}><PlayerCard player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} compact={true} auraVisibility={auraVisibility} emoteVisibility={emoteVisibility} activeEmote={playerEmotes[p.id]} onHoldComplete={p.id === myId ? handleHoldComplete : undefined} /></div>)}
                                 </div>
                             </div>
                         </div>
