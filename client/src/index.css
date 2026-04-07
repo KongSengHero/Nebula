@@ -1924,8 +1924,25 @@ body,
     transform: scale(0.9) rotate(180deg);
     opacity: 0.8;
   }
-  75% { 
+  75% {
     transform: scale(1.05) rotate(270deg);
     opacity: 0.9;
   }
+}
+
+/* ── Emote Wheel ──────────────────────────────────────────── */
+@keyframes emoteWheelIn {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes emoteItemIn {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes emotePopIn {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.7); }
+  65%  { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1.08); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
 }
