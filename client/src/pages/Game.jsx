@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { animate } from "animejs";
 import { useSocket, useSocketEvent } from "../hooks/useSocket";
 import PlayerCard from "../components/PlayerCard.jsx";
+import EmoteWheel, { getRandomEmotes } from "../components/EmoteWheel.jsx";
 import ChatPanel from "../components/ChatPanel.jsx";
 import PhaseOverlay from "../components/PhaseOverlay.jsx";
 import NightPanel from "../components/NightPanel.jsx";
@@ -459,6 +460,11 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [auraVisibility, setAuraVisibility] = useState("all");
 
+    // Emote state
+    const [playerEmotes,  setPlayerEmotes]  = useState({});  // { [playerId]: { src, label, id } }
+    const [emoteWheel,    setEmoteWheel]    = useState(null); // { cx, cy, emotes[] }
+    const emoteTimeoutsRef = useRef({});
+
     const [isMobile,       setIsMobile]       = useState(false);
     const [desktopChat, setDesktopChat] = useState(false);
     const [mobileChatOpen, setMobileChatOpen] = useState(false);
@@ -611,6 +617,23 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
     useSocketEvent("player:reconnected", ({ previousId, newId }) => { setPlayers(prev => prev.map(p => p.id === previousId ? { ...p, id: newId, disconnected: false } : p)); });
     useSocketEvent("player:lostConnection", ({ username, playerId }) => { setLostConnectionNotice(`${username} lost connection.`); setPlayers(prev => prev.filter(p => p.id !== playerId)); setTimeout(() => setLostConnectionNotice(""), 7000); });
     useSocketEvent("player:auraUpdated", ({ playerId, aura, rollsRemaining }) => { setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, aura, rollsRemaining } : p)); });
+
+    useSocketEvent("player:emote", ({ playerId, emote }) => {
+        setPlayerEmotes(prev => ({ ...prev, [playerId]: emote }));
+        clearTimeout(emoteTimeoutsRef.current[playerId]);
+        emoteTimeoutsRef.current[playerId] = setTimeout(() => {
+            setPlayerEmotes(prev => { const n = { ...prev }; delete n[playerId]; return n; });
+        }, 5000);
+    });
+
+    function handleHoldComplete(cx, cy) {
+        setEmoteWheel({ cx, cy, emotes: getRandomEmotes() });
+    }
+
+    function handleEmoteSelect(emote) {
+        setEmoteWheel(null);
+        socket.emit("player:emote", { roomId, emote });
+    }
 
     function submitVote() {
         if (!selectedTarget) return;
@@ -876,6 +899,17 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
                     </div>
                 </div>
             )}
+
+            {/* Emote Wheel */}
+            {emoteWheel && (
+                <EmoteWheel
+                    cx={emoteWheel.cx}
+                    cy={emoteWheel.cy}
+                    emotes={emoteWheel.emotes}
+                    onSelect={handleEmoteSelect}
+                    onClose={() => setEmoteWheel(null)}
+                />
+            )}
         </>
     );
 
@@ -935,7 +969,7 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
                             <span style={{ fontSize: 9, color: "#4a3060" }}>{aliveCount} alive / {players.length}</span>
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px,1fr))", gap: 10 }}>
-                            {players.map(p => <PlayerCard key={p.id} player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} auraVisibility={auraVisibility} />)}
+                            {players.map(p => <PlayerCard key={p.id} player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} auraVisibility={auraVisibility} activeEmote={playerEmotes[p.id]} onHoldComplete={p.id === myId ? handleHoldComplete : undefined} />)}
                         </div>
                     </div>
                     {isVoting && me?.alive && (
@@ -967,7 +1001,7 @@ export default function Game({ session, socket, onLeaveRoom, musicVolume, setMus
                         <div style={{ flexShrink: 0, borderBottom: "1px solid #1a0a2a", background: "#07000f", overflowY: "auto", maxHeight: 210 }}>
                             <div style={{ padding: "10px 12px" }}>
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                                    {players.map(p => <div key={p.id} style={{ width: 76 }}><PlayerCard player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} compact={true} auraVisibility={auraVisibility} /></div>)}
+                                    {players.map(p => <div key={p.id} style={{ width: 76 }}><PlayerCard player={p} isMe={p.id === myId} isSelected={selectedTarget === p.id} canSelect={me?.alive && canTarget(p)} onSelect={id => setSelectedTarget(selectedTarget === id ? null : id)} phase={phase} myRole={myRole} gnosiaAllies={allies.map(a => a.id)} voteBreakdown={voteBreakdown} allPlayers={players} compact={true} auraVisibility={auraVisibility} activeEmote={playerEmotes[p.id]} onHoldComplete={p.id === myId ? handleHoldComplete : undefined} /></div>)}
                                 </div>
                             </div>
                         </div>

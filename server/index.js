@@ -538,6 +538,20 @@ io.on("connection", (socket) => {
         reply(cb, { success: true, aura: picked, rollsRemaining: player.rollsRemaining });
     });
 
+    bindAckHandler("player:emote", ({ roomId, emote }, cb) => {
+        const gs = getRoom(roomId);
+        if (!gs) return reply(cb, { success: false, error: "Room not found." });
+        const player = gs.players.find(p => p.id === socket.id);
+        if (!player) return reply(cb, { success: false, error: "Player not found." });
+        // Sanitize: only allow safe path-like src and short label
+        const src   = String(emote?.src   || "").replace(/[^a-z0-9_.\-/]/gi, "").slice(0, 80);
+        const label = String(emote?.label || "").replace(/[^a-z0-9 ]/gi, "").slice(0, 16).toUpperCase();
+        const id    = String(emote?.id    || "").replace(/[^a-z0-9_]/gi, "").slice(0, 30);
+        if (!src) return reply(cb, { success: false, error: "Invalid emote." });
+        io.to(roomId).emit("player:emote", { playerId: socket.id, emote: { src, label, id } });
+        reply(cb, { success: true });
+    });
+
     bindAckHandler("player:selectAura", ({ roomId, aura }, cb) => {
         console.log(`[SELECT] Host ${socket.id} selecting aura ${aura} in room ${roomId}`);
         const gs = getRoom(roomId);

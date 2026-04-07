@@ -1,3 +1,4 @@
+import { useRef, useState, useEffect } from "react";
 import { AVATAR_COLORS } from "../lib/profiles.js";
 
 const buildAuraColumns = (specs, delayStep) =>
@@ -184,7 +185,46 @@ export default function PlayerCard({
     phase, myRole, gnosiaAllies = [],
     voteBreakdown = {}, allPlayers = [], compact = false,
     auraVisibility = "all",
+    activeEmote = null,
+    onHoldComplete = null,
 }) {
+    // Hold-to-emote state
+    const cardRef = useRef(null);
+    const holdRafRef = useRef(null);
+    const holdStartRef = useRef(null);
+    const [holdProgress, setHoldProgress] = useState(0);
+
+    const HOLD_MS = 2000;
+
+    function startHold(e) {
+        if (!isMe || !onHoldComplete) return;
+        // Only primary button / first touch
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        e.preventDefault();
+        holdStartRef.current = Date.now();
+        const tick = () => {
+            if (!holdStartRef.current) return;
+            const pct = Math.min(100, ((Date.now() - holdStartRef.current) / HOLD_MS) * 100);
+            setHoldProgress(pct);
+            if (pct < 100) {
+                holdRafRef.current = requestAnimationFrame(tick);
+            } else {
+                holdStartRef.current = null;
+                setHoldProgress(0);
+                const rect = cardRef.current?.getBoundingClientRect();
+                if (rect) onHoldComplete(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            }
+        };
+        holdRafRef.current = requestAnimationFrame(tick);
+    }
+
+    function cancelHold() {
+        cancelAnimationFrame(holdRafRef.current);
+        holdStartRef.current = null;
+        setHoldProgress(0);
+    }
+
+    useEffect(() => () => cancelAnimationFrame(holdRafRef.current), []);
     const color = AVATAR_COLORS[player.profileId] || "#c8b8ff";
     const isAlly = gnosiaAllies.includes(player.id);
     const isDead = !player.alive;
@@ -330,11 +370,66 @@ export default function PlayerCard({
         .join(" ");
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: "100%" }}>
+        <div
+            ref={cardRef}
+            onPointerDown={isMe && onHoldComplete ? startHold : undefined}
+            onPointerUp={isMe && onHoldComplete ? cancelHold : undefined}
+            onPointerLeave={isMe && onHoldComplete ? cancelHold : undefined}
+            onPointerCancel={isMe && onHoldComplete ? cancelHold : undefined}
+            style={{
+                display: "flex", flexDirection: "column", alignItems: "center",
+                gap: 6, width: "100%", position: "relative",
+                touchAction: isMe && onHoldComplete ? "none" : undefined,
+            }}>
+
+            {/* Active emote popup */}
+            {activeEmote && (
+                <div style={{
+                    position: "absolute",
+                    top: compact ? -62 : -24,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    zIndex: 30,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 2,
+                    animation: "emotePopIn 0.25s ease both",
+                    pointerEvents: "none",
+                }}>
+                    <div style={{
+                        background: "rgba(13,0,32,0.92)",
+                        border: "1px solid #2a1a4a",
+                        borderRadius: 8,
+                        padding: compact ? "3px" : "4px",
+                        boxShadow: "0 4px 18px rgba(0,0,0,0.7), 0 0 12px rgba(155,48,255,0.2)",
+                    }}>
+                        <img
+                            src={activeEmote.src}
+                            alt={activeEmote.label}
+                            style={{
+                                width: compact ? 64 : 76,
+                                height: compact ? 64 : 76,
+                                objectFit: "cover",
+                                borderRadius: 6,
+                                display: "block",
+                            }}
+                        />
+                    </div>
+                    <div style={{
+                        fontSize: 5,
+                        fontFamily: "Press Start 2P",
+                        color: "#8a7aa0",
+                        letterSpacing: "0.06em",
+                    }}>
+                        {activeEmote.label}
+                    </div>
+                </div>
+            )}
             <button
                 id={`player-card-${player.id}`}
                 onClick={() => canSelect && !isDead && onSelect(player.id)}
-                disabled={!canSelect || isDead}
+                disabled={(!canSelect || isDead) && !isMe}
                 className={cardClassName}
                 style={{
                     padding: compact ? "8px 6px" : "16px 12px",
@@ -345,7 +440,9 @@ export default function PlayerCard({
                     backdropFilter: "blur(12px)",
                     borderRadius: 16,
                     boxShadow: shadow !== "none" ? shadow : "0 8px 32px 0 rgba(0, 0, 0, 0.4)",
-                    cursor: !canSelect || isDead ? "default" : "pointer",
+                    cursor: isMe && onHoldComplete
+                        ? (holdProgress > 0 ? "grabbing" : "grab")
+                        : (!canSelect || isDead ? "default" : "pointer"),
                     opacity: isDead ? (hasAura ? 0.94 : 0.7) : 1,
                     transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
                     position: "relative",
@@ -353,6 +450,7 @@ export default function PlayerCard({
                     width: "100%",
                     transform: isSelected ? "translateY(-4px)" : "translateY(0)",
                     isolation: "isolate",
+                    userSelect: "none",
                 }}>
 
                 <div style={{
@@ -605,6 +703,35 @@ export default function PlayerCard({
                                 />
                             )}
                         </div>
+
+                        {/* Hold-to-emote progress ring */}
+                        {isMe && onHoldComplete && holdProgress > 0 && (
+                            <svg
+                                style={{
+                                    position: "absolute",
+                                    inset: -3,
+                                    width: avatarSize + 6,
+                                    height: avatarSize + 6,
+                                    zIndex: 25,
+                                    pointerEvents: "none",
+                                    overflow: "visible",
+                                }}
+                                viewBox={`0 0 ${avatarSize + 6} ${avatarSize + 6}`}
+                            >
+                                <circle
+                                    cx={(avatarSize + 6) / 2}
+                                    cy={(avatarSize + 6) / 2}
+                                    r={(avatarSize + 6) / 2 - 2.5}
+                                    stroke="#c8b8ff"
+                                    strokeWidth="2.5"
+                                    fill="none"
+                                    strokeDasharray={`${2 * Math.PI * ((avatarSize + 6) / 2 - 2.5)}`}
+                                    strokeDashoffset={`${2 * Math.PI * ((avatarSize + 6) / 2 - 2.5) * (1 - holdProgress / 100)}`}
+                                    transform={`rotate(-90 ${(avatarSize + 6) / 2} ${(avatarSize + 6) / 2})`}
+                                    strokeLinecap="round"
+                                />
+                            </svg>
+                        )}
                     </div>
 
                     <div style={{ textAlign: "center", width: "100%" }}>
