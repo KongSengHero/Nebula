@@ -232,6 +232,17 @@ body,
   box-shadow: 0 0 24px #ffd700aa;
 }
 
+.btn-doctor {
+  border-color: #b0ffb8;
+  color: #b0ffb8;
+}
+
+.btn-doctor:hover:not(:disabled) {
+  background: #b0ffb8;
+  color: #07000f;
+  box-shadow: 0 0 24px #b0ffb8aa;
+}
+
 .input {
   font-family: "Press Start 2P", monospace;
   font-size: 10px;

@@ -11,483 +11,17 @@ import { clearPlaySession } from "../lib/sessionPersistence.js";
 import { AVATAR_COLORS } from "../lib/profiles.js";
 import { BsStars } from "react-icons/bs";
 import { CiSettings } from "react-icons/ci";
-import { IoIosInfinite } from "react-icons/io";
 
-const PHASE_COLORS = {
-    DAY_DISCUSSION: "#00f5ff", VOTING: "#ffd700", AFTERNOON: "#ffb347",
-    NIGHT: "#9b30ff", MORNING: "#ff9ef5", END: "#ff2a2a",
-};
-
-const AURA_ROLL_OPTIONS = [
-    "aura-rage-mode", 
-    "aura-golden-saiyan", 
-    "aura-glacier",
-    "aura-sunset",
-    "aura-glitch",
-    "aura-sparkle-white",
-    "aura-sparkle-yellow",
-    "aura-sparkle-pink",
-    "aura-judgement",
-    // New auras
-    "aura-red-saiyan",
-    "aura-halo",
-    "aura-void",
-    "aura-sparkle-rainbow",
-    "aura-sparkle-red"
-];
-
-const AURA_PREVIEW = {
-    "aura-rage-mode": {
-        border: "#f5f5f588",
-        shadow: "0 0 22px rgba(255, 255, 255, 0.16)",
-        color: "#f5f5f5",
-        label: "RAGE MODE",
-    },
-    "aura-golden-saiyan": {
-        border: "#ffd70088",
-        shadow: "0 0 28px rgba(255, 215, 0, 0.26)",
-        color: "#ffd700",
-        label: "GOLDEN SAIYAN",
-    },
-    "aura-glacier": {
-        border: "#8fe8ff88",
-        shadow: "0 0 28px rgba(113, 220, 255, 0.22)",
-        color: "#8fe8ff",
-        label: "GLACIER",
-    },
-    "aura-sunset": {
-        border: "#ff450088",
-        shadow: "0 0 28px rgba(255, 69, 0, 0.3)",
-        color: "#ff8c00",
-        label: "SUNSET",
-    },
-    "aura-glitch": {
-        border: "#00ff0088",
-        shadow: "0 0 22px rgba(0, 255, 0, 0.22)",
-        color: "#00ff00",
-        label: "GLITCH",
-    },
-    "aura-sparkle-white": {
-        border: "#ffffff88",
-        shadow: "0 0 22px rgba(255, 255, 255, 0.22)",
-        color: "#ffffff",
-        label: "WHITE SPARKLE",
-    },
-    "aura-sparkle-yellow": {
-        border: "#fff62d88",
-        shadow: "0 0 22px rgba(255, 246, 45, 0.22)",
-        color: "#fff62d",
-        label: "YELLOW SPARKLE",
-    },
-    "aura-sparkle-pink": {
-        border: "#ff69b488",
-        shadow: "0 0 22px rgba(255, 105, 180, 0.22)",
-        color: "#ff69b4",
-        label: "PINK SPARKLE",
-    },
-    "aura-judgement": {
-        border: "#00f5ff88",
-        shadow: "0 0 32px rgba(0, 245, 255, 0.28)",
-        color: "#00f5ff",
-        label: "JUDGEMENT",
-    },
-    // New aura previews
-    "aura-red-saiyan": {
-        border: "#ff6b6b88",
-        shadow: "0 0 25px rgba(255, 107, 107, 0.24)",
-        color: "#ff6b6b",
-        label: "RED SAIYAN",
-    },
-    "aura-halo": {
-        border: "#ffd70088",
-        shadow: "0 0 20px rgba(255, 215, 0, 0.30)",
-        color: "#ffd700",
-        label: "HALO",
-    },
-    "aura-void": {
-        border: "#4a008088",
-        shadow: "0 0 30px rgba(74, 0, 128, 0.32)",
-        color: "#4a0080",
-        label: "VOID",
-    },
-    "aura-sparkle-rainbow": {
-        border: "#ff00ff88",
-        shadow: "0 0 26px rgba(255, 0, 255, 0.30)",
-        color: "#ff00ff",
-        label: "RAINBOW SPARKLE",
-    },
-    "aura-sparkle-red": {
-        border: "#ff6b6b88",
-        shadow: "0 0 22px rgba(255, 107, 107, 0.28)",
-        color: "#ff6b6b",
-        label: "RED SPARKLE",
-    },
-};
-const ROLE_COLORS = {
-    gnosia: "#9b30ff", engineer: "#00f5ff", doctor: "#b0ffb8",
-    guardian: "#ffd700", human: "#c8b8ff", lawyer: "#ff8833", traitor: "#ff4040",
-    illusionist: "#9b30ff",
-};
-const ROLE_INFO = {
-    gnosia:   { icon: "👁", desc: "Deceive the crew. Each night, coordinate with your allies to eliminate one human. You win when Gnosia outnumber humans." },
-    human:    { icon: "◈", desc: "Identify and vote out all Gnosia before they take over the ship." },
-    engineer: { icon: "⚡", desc: "Each night, scan one player to learn if they are Gnosia. If they are, they receive a warning — not your identity." },
-    doctor:   { icon: "☤", desc: "Each night, inspect one player in Cold Sleep to reveal their true role." },
-    guardian: { icon: "🛡", desc: "Each night, protect one other player. If the Gnosia target them, the kill is blocked." },
-    lawyer:   { icon: "⚖", desc: "Once per game, you may dismiss the vote during any voting round — cancelling it entirely so no one is eliminated." },
-    traitor:  { icon: "◈", desc: "You have no special ability, but you appear human to all scans and inspections. You win with the Gnosia." },
-    illusionist: { icon: <IoIosInfinite />, desc: "Before the mission begins, infect one crew member to turn them into Gnosia. After that, you act exactly like Gnosia and appear as Gnosia to all checks." },
-    
-};
-const isGnosiaRole = (role) => role === "gnosia" || role === "illusionist";
-
-function PhaseTimer({ endsAt, color }) {
-    const [rem, setRem] = useState(0);
-    useEffect(() => {
-        if (!endsAt) return;
-        const tick = () => setRem(Math.max(0, endsAt - Date.now()));
-        tick();
-        const id = setInterval(tick, 500);
-        return () => clearInterval(id);
-    }, [endsAt]);
-    const secs = Math.ceil(rem / 1000);
-    const mins = Math.floor(secs / 60);
-    const s = secs % 60;
-    const urgent = secs <= 30 && secs > 0;
-    return (
-        <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 7, color: "#8a7aa0", letterSpacing: "0.2em", marginBottom: 4 }}>TIME REMAINING</div>
-            <div style={{
-                fontSize: 32, color: urgent ? "#ff2a2a" : color,
-                textShadow: urgent ? "0 0 16px #ff2a2a" : "0 0 16px " + color + "aa",
-                animation: urgent ? "urgentPulse 0.6s infinite" : "none",
-                fontVariantNumeric: "tabular-nums", letterSpacing: "0.05em",
-            }}>
-                {String(mins).padStart(2, "0")}:{String(s).padStart(2, "0")}
-            </div>
-        </div>
-    );
-}
-
-function SettingsActionButton({
-    label,
-    status,
-    active = false,
-    disabled = false,
-    onClick,
-    accent = "#ff8c1a",
-    children,
-}) {
-    return (
-        <button
-            onClick={onClick}
-            disabled={disabled}
-            style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                padding: "14px 16px",
-                background: active ? "rgba(255, 140, 26, 0.16)" : "rgba(10, 3, 0, 0.8)",
-                border: `1px solid ${active ? accent : "rgba(255, 140, 26, 0.28)"}`,
-                boxShadow: active ? `0 0 18px ${accent}33` : "none",
-                color: active ? "#ffd7b0" : "#ffb36b",
-                fontFamily: "Press Start 2P",
-                fontSize: 8,
-                cursor: disabled ? "not-allowed" : "pointer",
-                opacity: disabled ? 0.45 : 1,
-                textAlign: "left",
-            }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {children}
-                <span>{label}</span>
-            </span>
-            <span style={{
-                flexShrink: 0,
-                padding: "4px 8px",
-                border: `1px solid ${active ? "#ffd18a66" : "#ff8c1a33"}`,
-                background: active ? "rgba(255, 209, 138, 0.12)" : "transparent",
-                color: active ? "#ffd18a" : "#ff8c1a",
-                fontSize: 7,
-                letterSpacing: "0.08em",
-            }}>
-                {status}
-            </span>
-        </button>
-    );
-}
-
-function GameOverScreen({ result, onPlayAgain, amHost, musicVolume, setMusicVolume, musicMuted, setMusicMuted, myId = null, playerEmotes = {}, onEmote }) {
-    const hw = result.winner === "humans";
-    const wc = hw ? "#00f5ff" : "#9b30ff";
-    const [volumePanelPosition, setVolumePanelPosition] = useState({ x: null, y: null });
-    const dragStateRef = useRef(null);
-
-    // Emote wheel state for game-over screen
-    const holdTimerRef   = useRef(null);
-    const avatarRefs   = useRef({});
-    const [goIsHolding, setGoIsHolding] = useState(false);
-    const [goEmoteWheel,   setGoEmoteWheel]   = useState(null);
-
-    function goStartHold(playerId, e) {
-        if (e.pointerType === "mouse" && e.button !== 0) return;
-        e.preventDefault();
-        setGoIsHolding(true);
-        holdTimerRef.current = setTimeout(() => {
-            setGoIsHolding(false);
-            const rect = avatarRefs.current[playerId]?.getBoundingClientRect();
-            if (rect) setGoEmoteWheel({ cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2, emotes: getRandomEmotes(), borderRadius: "4px" });
-        }, 2000);
-    }
-
-    function goCancelHold() {
-        clearTimeout(holdTimerRef.current);
-        setGoIsHolding(false);
-    }
-
-    function startVolumePanelDrag(event) {
-        if (event.target.closest("button, input")) return;
-        const panelRect = event.currentTarget.getBoundingClientRect();
-        dragStateRef.current = {
-            offsetX: event.clientX - panelRect.left,
-            offsetY: event.clientY - panelRect.top,
-        };
-        event.preventDefault();
-    }
-
-    useEffect(() => {
-        function handlePointerMove(event) {
-            if (!dragStateRef.current) return;
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            const panelWidth = 280;
-            const panelHeight = 120;
-            const nextX = Math.min(Math.max(12, event.clientX - dragStateRef.current.offsetX), Math.max(12, width - panelWidth - 12));
-            const nextY = Math.min(Math.max(12, event.clientY - dragStateRef.current.offsetY), Math.max(12, height - panelHeight - 12));
-            setVolumePanelPosition({ x: nextX, y: nextY });
-        }
-
-        function stopDrag() {
-            dragStateRef.current = null;
-        }
-
-        window.addEventListener("pointermove", handlePointerMove);
-        window.addEventListener("pointerup", stopDrag);
-        window.addEventListener("pointercancel", stopDrag);
-
-        return () => {
-            window.removeEventListener("pointermove", handlePointerMove);
-            window.removeEventListener("pointerup", stopDrag);
-            window.removeEventListener("pointercancel", stopDrag);
-        };
-    }, []);
-
-    return (
-        <div className="crt star-bg" style={{
-            position: "fixed", inset: 0, display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", gap: 28, padding: 32,
-            zIndex: 60, overflowY: "auto", animation: "fadeIn 0.4s ease",
-        }}>
-            {goEmoteWheel && (
-                <EmoteWheel
-                    cx={goEmoteWheel.cx} cy={goEmoteWheel.cy}
-                    emotes={goEmoteWheel.emotes} borderRadius={goEmoteWheel.borderRadius}
-                    onSelect={emote => { setGoEmoteWheel(null); onEmote?.(emote); }}
-                    onClose={() => setGoEmoteWheel(null)}
-                />
-            )}
-            <div style={{ fontSize: 80, filter: `drop-shadow(0 0 30px ${wc})` }}>{hw ? "◈" : "👁"}</div>
-            <div style={{ textAlign: "center" }}>
-                <h1 style={{ fontSize: 28, color: wc, textShadow: `0 0 20px ${wc}`, marginBottom: 12 }}>
-                    {hw ? "HUMANS WIN" : "GNOSIA WIN"}
-                </h1>
-                <p style={{ fontSize: 10, color: "#4a3060" }}>
-                    {hw ? "All Gnosia eliminated. The crew survives." : "The Gnosia have taken control."}
-                </p>
-            </div>
-            <div style={{ border: `1px solid ${wc}33`, padding: 24, maxWidth: 480, width: "100%", background: "#0d002088" }}>
-                <div style={{ fontSize: 9, color: "#4a3060", marginBottom: 16 }}>FINAL MANIFEST</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {result.players.map(p => {
-                        const rc = ROLE_COLORS[p.role] || "#c8b8ff";
-                        const ac = AVATAR_COLORS[p.profileId] || "#c8b8ff";
-                        const isMe = p.id === myId;
-                        return (
-                            <div key={p.id} style={{ position: "relative", display: "flex", alignItems: "center", gap: 12, paddingBottom: 10, borderBottom: "1px solid #1a0a2a" }}>
-                                {playerEmotes[p.id] && (
-                                    <div style={{ position: "absolute", top: -58, left: 0, zIndex: 30, pointerEvents: "none", animation: "emotePopIn 0.25s ease both" }}>
-                                        <div style={{ background: "rgba(13,0,32,0.92)", border: "1px solid #2a1a4a", borderRadius: 8, padding: 4, boxShadow: "0 4px 18px rgba(0,0,0,0.7)" }}>
-                                            <img src={playerEmotes[p.id].src} alt={playerEmotes[p.id].label} style={{ width: 56, height: "auto", objectFit: "contain", borderRadius: 6, display: "block" }} />
-                                        </div>
-                                    </div>
-                                )}
-                                <div
-                                    ref={el => { if (isMe) avatarRefs.current[p.id] = el; }}
-                                    onPointerDown={isMe ? e => goStartHold(p.id, e) : undefined}
-                                    onPointerUp={isMe ? goCancelHold : undefined}
-                                    onPointerLeave={isMe ? goCancelHold : undefined}
-                                    onPointerCancel={isMe ? goCancelHold : undefined}
-                                    onContextMenu={e => e.preventDefault()}
-                                    className={isMe ? "no-callout" : ""}
-                                    style={{ width: 40, height: 40, flexShrink: 0, border: `2px solid ${ac}55`, background: ac + "15", overflow: "hidden", position: "relative", cursor: isMe ? (goIsHolding ? "grabbing" : "grab") : "default", touchAction: isMe ? "none" : undefined }}>
-                                    <img src={`/profiles/${p.profileId}.jpg`} alt={p.username} style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                        draggable="false"
-                                        onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }} />
-                                    <div style={{ display: "none", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", color: ac, fontSize: 16, fontWeight: "bold" }}>
-                                        {p.username[0].toUpperCase()}
-                                    </div>
-                                    {isMe && (
-                                        <svg className="hold-ring-svg" viewBox="0 0 40 40" style={{ position: "absolute", inset: 0 }}>
-                                            <rect
-                                                className={`hold-ring-circle ${goIsHolding ? 'active' : ''}`}
-                                                x="2" y="2" width="36" height="36" rx="4"
-                                                pathLength="100"
-                                                strokeDasharray="100"
-                                                strokeDashoffset="100"
-                                                strokeLinejoin="round"
-                                            />
-                                        </svg>
-                                    )}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: 10, color: "#e0d4ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.username}</div>
-                                    <div style={{ fontSize: 8, color: p.alive ? "#4a3060" : "#2a1a3a", marginTop: 3 }}>{p.alive ? "SURVIVED" : "ELIMINATED"}</div>
-                                </div>
-                                <span style={{ fontSize: 8, border: `1px solid ${rc}44`, color: rc, padding: "4px 10px", flexShrink: 0 }}>{p.role.toUpperCase()}</span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-            <button className="btn btn-lg" onClick={onPlayAgain} style={{ opacity: amHost ? 1 : 0.6 }}>
-                {amHost ? "PLAY AGAIN" : "WAITING FOR HOST"}
-            </button>
-            <div
-                onPointerDown={startVolumePanelDrag}
-                style={{
-                    position: "fixed",
-                    right: volumePanelPosition.x === null ? 24 : "auto",
-                    bottom: volumePanelPosition.y === null ? 24 : "auto",
-                    left: volumePanelPosition.x === null ? "auto" : volumePanelPosition.x,
-                    top: volumePanelPosition.y === null ? "auto" : volumePanelPosition.y,
-                    width: "min(280px, calc(100vw - 32px))",
-                    border: `1px solid ${wc}44`,
-                    background: "#0d0020ee",
-                    boxShadow: `0 0 20px ${wc}22`,
-                    padding: 16,
-                }}>
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        marginBottom: 10,
-                        cursor: "grab",
-                        userSelect: "none",
-                        touchAction: "none",
-                    }}>
-                    <div style={{ fontSize: 8, color: "#4a3060", letterSpacing: "0.16em" }}>
-                        YOUR MUSIC VOLUME
-                    </div>
-                    <div style={{
-                        padding: "4px 8px",
-                        border: `1px solid ${wc}33`,
-                        background: `${wc}08`,
-                        color: wc,
-                        fontSize: 6,
-                        letterSpacing: "0.1em",
-                    }}>
-                        DRAG
-                    </div>
-                </div>
-                <div style={{ height: 1, background: `linear-gradient(90deg, transparent, ${wc}66, transparent)`, marginBottom: 12 }} />
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 10 }}>
-                    <span style={{ fontSize: 9, color: wc }}>{musicMuted ? "MUTED" : `${Math.round(musicVolume * 100)}%`}</span>
-                    <button
-                        className="btn-topbar"
-                        onClick={() => setMusicMuted(!musicMuted)}
-                        style={{ borderColor: `${wc}44`, color: musicMuted ? "#8a7aa0" : wc }}>
-                        {musicMuted ? "UNMUTE" : "MUTE"}
-                    </button>
-                </div>
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={Math.round(musicVolume * 100)}
-                    onChange={(e) => setMusicVolume(Number(e.target.value) / 100)}
-                    style={{ width: "100%", accentColor: wc }}
-                />
-            </div>
-        </div>
-    );
-}
-
-function ReconnectingOverlay({ visible, message }) {
-    if (!visible) return null;
-    return (
-        <div style={{ position: "fixed", top: 56, left: "50%", transform: "translateX(-50%)", zIndex: 999999, pointerEvents: "none" }}>
-            <div style={{
-                border: "1px solid #00f5ff55",
-                background: "#0d0020f2",
-                color: "#00f5ff",
-                padding: "10px 16px",
-                boxShadow: "0 0 20px #000",
-                fontSize: 8,
-                fontFamily: "Press Start 2P, monospace",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-            }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#00f5ff", boxShadow: "0 0 12px #00f5ff", animation: "bounce 1.2s ease-in-out infinite" }} />
-                <span>{message || "RECONNECTING..."}</span>
-            </div>
-            <div style={{ textAlign: "center", marginTop: 8 }}>
-                <p style={{ fontSize: 8, color: "#4a3060", margin: 0 }}>
-                    Keeping game state on screen while reconnecting...
-                </p>
-            </div>
-            <style>{`
-                @keyframes bounce { 0%,100%{transform:translateY(0);opacity:0.6} 50%{transform:translateY(-6px);opacity:1} }
-            `}</style>
-        </div>
-    );
-}
-
-function SkipBar({ skipVotes, myId, onSkip, actionError, actionMsg }) {
-    const iVoted = skipVotes.some(v => v.id === myId);
-    return (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            {actionError && <div style={{ fontSize: 8, color: "#ff2a2a", width: "100%" }}>⚠ {actionError}</div>}
-            {actionMsg  && <div style={{ fontSize: 8, color: "#00f5ff", width: "100%" }}>{actionMsg}</div>}
-            <button className="btn btn-secondary" style={{ fontSize: 8, padding: "8px 12px", flexShrink: 0 }} onClick={() => { if (!iVoted) onSkip(); }} disabled={iVoted}>
-                {iVoted ? "✓ SKIP REQUESTED" : "⏭ SKIP PHASE"}
-            </button>
-            <div style={{ display: "flex", alignItems: "center" }}>
-                {skipVotes.map((voter, i) => (
-                    <img key={voter.id} src={`/profiles/${voter.profileId}.jpg`} alt={voter.username} title={`${voter.username} wants to skip`}
-                        style={{ width: 26, height: 26, borderRadius: "50%", border: "2px solid #07000f", objectFit: "cover", boxShadow: "0 0 8px #00f5ff44", marginLeft: i > 0 ? -8 : 0, zIndex: skipVotes.length - i, position: "relative", animation: "fadeInUp 0.3s ease forwards" }}
-                        onError={e => { e.target.style.display = "none"; }} />
-                ))}
-            </div>
-        </div>
-    );
-}
-
-function VoteProgressBar({ votesCast, totalAlive }) {
-    const pct = totalAlive > 0 ? (votesCast / totalAlive) * 100 : 0;
-    return (
-        <div style={{ padding: "10px 16px", flexShrink: 0, borderBottom: "1px solid #1a0a2a", display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 8, color: "#4a3060", flexShrink: 0 }}>VOTES</span>
-            <div style={{ flex: 1, height: 4, background: "#1a0015", borderRadius: 2 }}>
-                <div style={{ height: "100%", background: "#ffd700", boxShadow: "0 0 8px #ffd700", borderRadius: 2, transition: "width 0.5s", width: `${pct}%` }} />
-            </div>
-            <span style={{ fontSize: 9, color: "#ffd700", flexShrink: 0 }}>{votesCast}/{totalAlive}</span>
-        </div>
-    );
-}
+// Modularized imports
+import { PHASE_COLORS, ROLE_COLORS, ROLE_INFO, isGnosiaRole } from "../lib/gameConfig.jsx";
+import { AURA_ROLL_OPTIONS, AURA_PREVIEW } from "../lib/auras.js";
+import PhaseTimer from "../components/PhaseTimer.jsx";
+import SettingsActionButton from "../components/SettingsActionButton.jsx";
+import GameOverScreen from "../components/GameOverScreen.jsx";
+import ReconnectingOverlay from "../components/ReconnectingOverlay.jsx";
+import SkipBar from "../components/SkipBar.jsx";
+import VoteProgressBar from "../components/VoteProgressBar.jsx";
+import { useGameSocket } from "../hooks/useGameSocket.js";
 
 export default function Game({
     session,
@@ -501,9 +35,6 @@ export default function Game({
     reconnectMessage = "RECONNECTING...",
 }) {
     const { roomId, myId, myRole, allies: initialAllies = [], gnosiaCount } = session;
-
-    // Note: Render.com keep-awake heartbeat has been moved to App.jsx to ensure
-    // it runs across all screens including the Lobby.
 
     const [players,       setPlayers]       = useState(session.lastPhasePayload?.players || []);
     const [allies,        setAllies]        = useState(initialAllies);
@@ -565,43 +96,50 @@ export default function Game({
         setUnread({ public: unreadPub, gnosia: unreadGn });
     }, [unreadPub, unreadGn]);
 
-    useSocketEvent("chat:message", msg => {
-        const formatted = {
-            ...msg,
-            time: new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        };
-        if (msg.channel === "gnosia") {
-            setGnMsgs(p => [...p, formatted]);
-            const isViewingGn = (desktopChat || mobileChatOpen) && activeChatTab === "gnosia";
-            if (!isViewingGn) setUnreadGn(n => n + 1);
-        } else {
-            setPubMsgs(p => [...p, formatted]);
-            const isViewingPub = (desktopChat || mobileChatOpen) && activeChatTab === "public";
-            if (!isViewingPub) setUnreadPub(n => n + 1);
-        }
-    });
+    function showResultModal(payload) {
+        setResultModal(payload);
+        const ms = typeof payload?.durationMs === "number" ? payload.durationMs : 6000;
+        setTimeout(() => setResultModal(null), ms);
+    }
 
-    // Auto-switch channel based on phase
-    useEffect(() => {
-        if (phase === "NIGHT" && isGnosiaRole(myRole)) {
-            setActiveChatTab("gnosia");
-        } else if (phase === "DAY_DISCUSSION") {
-            setActiveChatTab("public");
-        }
-    }, [phase, myRole]);
-
-    useSocketEvent("phase:changed", ({ phase: p }) => {
-        const label = {
-            DAY_DISCUSSION: "☀ Day Discussion begins.",
-            VOTING: "⚖ Voting phase — choose wisely.",
-            AFTERNOON: "🌅 Afternoon cooldown.",
-            NIGHT: "🌑 Night has fallen.",
-            MORNING: "🌄 Morning — results revealed.",
-        }[p];
-        if (!label) return;
-        const sys = { id: Date.now(), type: "system", text: label };
-        setPubMsgs(p => [...p, sys]);
-        if (isGnosiaRole(myRole)) setGnMsgs(p => [...p, sys]);
+    // ── SOCKET INITIALIZATION ─────────────────────────────────────────
+    useGameSocket({
+        roomId, myId, myRole, socket,
+        players, setPlayers,
+        setAllies,
+        setPhase,
+        setRound,
+        setTimers,
+        setMorningReport,
+        setShowOverlay,
+        setGameOver,
+        setSelectedTarget,
+        setNightSubmitted,
+        setActionError,
+        setActionMsg,
+        setVoteProgress,
+        setGnosiaVP,
+        setScanResult,
+        setInspectResult,
+        setGuardianResult,
+        setScannedAlert,
+        setHasVoted,
+        setHasLawyerDismissed,
+        setVoteDismissed,
+        showResultModal,
+        setVoteReveal,
+        setVoteBreakdown,
+        setSkipVotes,
+        setLostConnectionNotice,
+        setPubMsgs,
+        setGnMsgs,
+        setUnreadPub,
+        setUnreadGn,
+        desktopChat,
+        mobileChatOpen,
+        activeChatTab,
+        setPlayerEmotes,
+        emoteTimeoutsRef,
     });
 
     const handleClearUnread = (tab) => {
@@ -636,79 +174,6 @@ export default function Game({
             setShowStartReveal(true); setHasShownStartReveal(true); setShowOverlay(false);
         }
     }, [phase, round, players.length, hasShownStartReveal]);
-
-    function showResultModal(payload) {
-        setResultModal(payload);
-        const ms = typeof payload?.durationMs === "number" ? payload.durationMs : 6000;
-        setTimeout(() => setResultModal(null), ms);
-    }
-
-    useSocketEvent("game:roleAssigned", rolePayload => {
-        if (isGnosiaRole(rolePayload.role) && rolePayload.gnosiaAllies) setAllies(rolePayload.gnosiaAllies);
-    });
-
-    useSocketEvent("phase:changed", ({ phase: p, round: r, timers: t, players: pl, skipVotes: sv, morningReport: mr }) => {
-        setPhase(p); setRound(r); setTimers(t); setPlayers(pl);
-        setSelectedTarget(null); setNightSubmitted(false);
-        setActionError(""); setActionMsg(""); setHasVoted(false);
-        setShowOverlay(true); setScanResult(null); setInspectResult(null); setGuardianResult(null);
-        if (p !== "VOTE_REVEAL" && p !== "AFTERNOON") setVoteBreakdown(null);
-        setSkipVotes(Array.isArray(sv) ? sv : []);
-        setMorningReport(mr || null);
-    });
-
-    useSocketEvent("phase:skip:updated", voters => setSkipVotes(Array.isArray(voters) ? voters : []));
-    useSocketEvent("vote:progress",      ({ votesCast, totalAlive }) => setVoteProgress({ votesCast, totalAlive }));
-    useSocketEvent("vote:dismissed",     ({ byUsername, message }) => {
-        setVoteDismissed({ byUsername, message });
-        setTimeout(() => setVoteDismissed(null), 3500);
-    });
-
-    useSocketEvent("vote:result", result => {
-        setVoteBreakdown(result.votes || {});
-        setVoteReveal({ eliminatedId: result.eliminated || null, eliminatedUsername: result.eliminatedUsername || null, reason: result.reason || null });
-        setTimeout(() => {
-            setMorningReport(prev => ({ ...(prev || {}), coldSleep: result.eliminated, coldSleepUsername: result.eliminatedUsername }));
-            if (result.eliminated) setPlayers(prev => prev.map(p => p.id === result.eliminated ? { ...p, alive: false, inColdSleep: true } : p));
-            setVoteReveal(null);
-        }, 4200);
-    });
-
-    useSocketEvent("night:scanResult", r => {
-        setScanResult(r);
-        showResultModal({ variant: r?.isGnosia ? "danger" : "info", title: "ENGINEER SCAN RESULT", message: `${r?.targetUsername || "Target"} is ${r?.isGnosia ? "GNOSIA" : "HUMAN"}.` });
-    });
-
-    useSocketEvent("night:inspectResult", r => {
-        setInspectResult(r); if (r?.error) return;
-        showResultModal({ variant: r?.role === "gnosia" ? "danger" : "success", title: "DOCTOR INSPECTION RESULT", message: `${r?.targetUsername || "Target"} was ${r?.role === "gnosia" ? "GNOSIA" : "HUMAN"}.` });
-    });
-
-    useSocketEvent("night:guardianResult", r => {
-        setGuardianResult(r);
-        showResultModal({ variant: r?.worked ? "success" : "info", title: "PROTECTION OUTCOME", message: r?.worked ? `You protected ${r?.targetUsername || "Target"} from the Gnosia!` : `Your ward ${r?.targetUsername || "Target"} was not targeted tonight.` });
-    });
-
-    useSocketEvent("night:scannedAlert", payload => {
-        setScannedAlert(true); setTimeout(() => setScannedAlert(false), 8000);
-        showResultModal({ variant: "danger", title: "GNOSIA ALERT", message: payload?.message || "You have been scanned by the Engineer." });
-    });
-
-    useSocketEvent("ui:toast", t => showResultModal({ variant: t?.variant || "info", title: t?.title || "NOTICE", message: t?.message || "", durationMs: t?.durationMs }));
-    useSocketEvent("night:gnosiaVoteProgress", ({ votesIn, totalGnosia }) => { setGnosiaVP({ votesIn, totalGnosia }); setActionMsg(`${votesIn}/${totalGnosia} Gnosia voted`); });
-    useSocketEvent("game:over", r => { setGameOver(r); setPhase("END"); });
-    useSocketEvent("player:disconnected", ({ socketId }) => { setPlayers(prev => prev.map(p => p.id === socketId ? { ...p, disconnected: true } : p)); });
-    useSocketEvent("player:reconnected", ({ previousId, newId }) => { setPlayers(prev => prev.map(p => p.id === previousId ? { ...p, id: newId, disconnected: false } : p)); });
-    useSocketEvent("player:lostConnection", ({ username, playerId }) => { setLostConnectionNotice(`${username} lost connection.`); setPlayers(prev => prev.filter(p => p.id !== playerId)); setTimeout(() => setLostConnectionNotice(""), 7000); });
-    useSocketEvent("player:auraUpdated", ({ playerId, aura, rollsRemaining }) => { setPlayers(prev => prev.map(p => p.id === playerId ? { ...p, aura, rollsRemaining } : p)); });
-
-    useSocketEvent("player:emote", ({ playerId, emote }) => {
-        setPlayerEmotes(prev => ({ ...prev, [playerId]: emote }));
-        clearTimeout(emoteTimeoutsRef.current[playerId]);
-        emoteTimeoutsRef.current[playerId] = setTimeout(() => {
-            setPlayerEmotes(prev => { const n = { ...prev }; delete n[playerId]; return n; });
-        }, 5000);
-    });
 
     function handleHoldComplete(cx, cy) {
         setEmoteWheel({ cx, cy, emotes: getRandomEmotes(), borderRadius: "50%" });
@@ -977,7 +442,7 @@ export default function Game({
                                 status={emoteVisibility === "all" ? "ACTIVE" : "OFF"}
                                 active={emoteVisibility === "all"}
                                 onClick={() => setEmoteVisibility("all")}
-                            />
+                                />
                             <div style={{ fontSize: 8, color: "#b97b4e", lineHeight: 1.8, marginTop: 6 }}>
                                 These settings affect only your screen.
                             </div>
@@ -1107,7 +572,7 @@ export default function Game({
             {topBar}
             {isMobile ? (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                    {! (isNight && isGnosiaRole(myRole)) && (
+                    {! (isNight && (isGnosiaRole(myRole) || myRole === "doctor")) && (
                         <div style={{ flexShrink: 0, borderBottom: "1px solid #1a0a2a", background: "#07000f", overflowY: "auto", maxHeight: 210 }}>
                             <div style={{ padding: "10px 12px" }}>
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
