@@ -332,7 +332,7 @@ export default function NightPanel({
                         <div style={{ fontSize: 8, color: "#ff2a2a", marginBottom: 8 }}>⚠ {actionError}</div>
                     )}
                     <button
-                        className={`btn ${isGnosiaRole(myRole) ? "btn-gnosia" : myRole === "doctor" ? "" : myRole === "guardian" ? "btn-gold" : ""}`}
+                        className={`btn ${isGnosiaRole(myRole) ? "btn-gnosia" : myRole === "doctor" ? "btn-doctor" : myRole === "guardian" ? "btn-gold" : ""}`}
                         style={{
                             width: "100%", fontSize: 10, borderColor: selectedTarget ? color : undefined,
                             color: selectedTarget ? color : undefined
